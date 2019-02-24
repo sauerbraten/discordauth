@@ -1,1 +1,3 @@
 cmd/maitred/maitred
+users.sqlite
+cmd/addauth/addauth

@@ -2,13 +2,13 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"log"
 	"net"
 	"strings"
 	"time"
 
+	"github.com/sauerbraten/maitred/internal/db"
 	"github.com/sauerbraten/maitred/pkg/auth"
 )
 
@@ -38,14 +38,13 @@ type request struct {
 }
 
 type AuthServer struct {
-	conn *net.TCPConn
-	in   *bufio.Scanner
-
-	usersByName map[string]*User
+	conn        *net.TCPConn
+	in          *bufio.Scanner
+	db          *db.Database
 	pendingByID map[uint]*request
 }
 
-func Listen(listenAddr *net.TCPAddr, users []*User, stop <-chan struct{}) {
+func Listen(listenAddr *net.TCPAddr, db *db.Database, stop <-chan struct{}) {
 	listener, err := net.ListenTCP("tcp", listenAddr)
 	if err != nil {
 		log.Printf("error starting to listen on %s: %v", listenAddr, err)
@@ -58,15 +57,10 @@ func Listen(listenAddr *net.TCPAddr, users []*User, stop <-chan struct{}) {
 		}
 
 		s := &AuthServer{
-			conn: conn,
-			in:   bufio.NewScanner(conn),
-
-			usersByName: map[string]*User{},
+			conn:        conn,
+			in:          bufio.NewScanner(conn),
+			db:          db,
 			pendingByID: map[uint]*request{},
-		}
-
-		for _, u := range users {
-			s.usersByName[u.Name] = u
 		}
 
 		go s.run(stop)
@@ -165,15 +159,15 @@ func (s *AuthServer) handleConfirmAuthAnswer(args string) {
 }
 
 func (s *AuthServer) generateChallenge(requestID uint, name string) (challenge string, err error) {
-	u, ok := s.usersByName[name]
-	if !ok {
-		return "", errors.New("no user '" + name + "'")
+	pubkey, err := s.db.GetPublicKey(name)
+	if err != nil {
+		return "", err
 	}
 
-	challenge, solution, err := auth.GenerateChallenge(u.PublicKey)
+	challenge, solution, err := auth.GenerateChallenge(pubkey)
 	if err != nil {
 		delete(s.pendingByID, requestID)
-		return "", fmt.Errorf("could not generate challenge using pubkey %s of %s: %v", u.PublicKey, u.Name, err)
+		return "", fmt.Errorf("could not generate challenge using pubkey %s of %s: %v", pubkey, name, err)
 	}
 
 	s.pendingByID[requestID] = &request{

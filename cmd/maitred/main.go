@@ -6,14 +6,13 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/sauerbraten/jsonfile"
+	"github.com/sauerbraten/maitred/internal/db"
 )
 
 func main() {
-	var users []*User
-	err := jsonfile.ParseFile("users.json", &users)
+	db, err := db.New("users.sqlite")
 	if err != nil {
-		log.Fatalln("error parsing users.json:", err)
+		log.Fatalln("error opening users database:", err)
 	}
 
 	addr, err := net.ResolveTCPAddr("tcp", ":28787")
@@ -25,7 +24,7 @@ func main() {
 	signal.Notify(interrupt, os.Interrupt)
 
 	stop := make(chan struct{})
-	go Listen(addr, users, stop)
+	go Listen(addr, db, stop)
 
 	<-interrupt
 	close(stop)
