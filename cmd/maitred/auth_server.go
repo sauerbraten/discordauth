@@ -44,29 +44,6 @@ type AuthServer struct {
 	pendingByID map[uint]*request
 }
 
-func Listen(listenAddr *net.TCPAddr, db *db.Database, stop <-chan struct{}) {
-	listener, err := net.ListenTCP("tcp", listenAddr)
-	if err != nil {
-		log.Printf("error starting to listen on %s: %v", listenAddr, err)
-	}
-
-	for {
-		conn, err := listener.AcceptTCP()
-		if err != nil {
-			log.Printf("error accepting connection: %v", err)
-		}
-
-		s := &AuthServer{
-			conn:        conn,
-			in:          bufio.NewScanner(conn),
-			db:          db,
-			pendingByID: map[uint]*request{},
-		}
-
-		go s.run(stop)
-	}
-}
-
 func (s *AuthServer) run(stop <-chan struct{}) {
 	incoming := make(chan string)
 	go func() {
@@ -76,14 +53,19 @@ func (s *AuthServer) run(stop <-chan struct{}) {
 		if err := s.in.Err(); err != nil {
 			log.Println(err)
 		}
+		close(incoming)
 	}()
 
 	for {
 		select {
-		case msg := <-incoming:
+		case msg, ok := <-incoming:
+			if !ok {
+				log.Println(s.conn.RemoteAddr(), "closed the connection")
+				return
+			}
 			s.handle(msg)
 		case <-stop:
-			log.Println("received stop signal")
+			log.Println("closing connection to", s.conn.RemoteAddr())
 			s.conn.Close()
 			return
 		}
@@ -116,45 +98,47 @@ func (s *AuthServer) respond(format string, args ...interface{}) {
 }
 
 func (s *AuthServer) handleRequestAuthChallenge(args string) {
-	var (
-		requestID uint
-		name      string
-	)
-	_, err := fmt.Sscanf(args, "%d %s", &requestID, &name)
-	if err != nil {
-		log.Printf("malformed %s message from game server: '%s': %v", requestAuthChallenge, args, err)
-		return
+	r := strings.NewReader(strings.TrimSpace(args))
+	for len(args) > 0 {
+		var requestID uint
+		var name string
+		_, err := fmt.Fscanf(r, "%d %s", &requestID, &name)
+		if err != nil {
+			log.Printf("malformed %s message from game server: '%s': %v", requestAuthChallenge, args, err)
+			return
+		}
+
+		log.Printf("generating challenge for '%s' (request %d)", name, requestID)
+
+		challenge, err := s.generateChallenge(requestID, name)
+		if err != nil {
+			log.Printf("could not generate challenge for request %d (%s): %v", requestID, name, err)
+			s.respond("%s %d", authFailed, requestID)
+			return
+		}
+
+		s.respond("%s %d %s", challengeAuth, requestID, challenge)
 	}
-
-	log.Printf("generating challenge for '%s' (request %d)", name, requestID)
-
-	challenge, err := s.generateChallenge(requestID, name)
-	if err != nil {
-		log.Printf("could not generate challenge for request %d (%s): %v", requestID, name, err)
-		s.respond("%s %d", authFailed, requestID)
-		return
-	}
-
-	s.respond("%s %d %s", challengeAuth, requestID, challenge)
 }
 
 func (s *AuthServer) handleConfirmAuthAnswer(args string) {
-	var (
-		requestID uint
-		answer    string
-	)
-	_, err := fmt.Sscanf(args, "%d %s", &requestID, &answer)
-	if err != nil {
-		log.Printf("malformed %s message from game server: '%s': %v", confirmAuthAnswer, args, err)
-		return
-	}
+	r := strings.NewReader(strings.TrimSpace(args))
+	for len(args) > 0 {
+		var requestID uint
+		var answer string
+		_, err := fmt.Fscanf(r, "%d %s", &requestID, &answer)
+		if err != nil {
+			log.Printf("malformed %s message from game server: '%s': %v", confirmAuthAnswer, args, err)
+			return
+		}
 
-	if s.checkAnswer(requestID, answer) {
-		s.respond("%s %d", authSuccesful, requestID)
-		log.Println("request", requestID, "completed successfully")
-	} else {
-		s.respond("%s %d", authFailed, requestID)
-		log.Println("request", requestID, "failed")
+		if s.checkAnswer(requestID, answer) {
+			s.respond("%s %d", authSuccesful, requestID)
+			log.Println("request", requestID, "completed successfully")
+		} else {
+			s.respond("%s %d", authFailed, requestID)
+			log.Println("request", requestID, "failed")
+		}
 	}
 }
 

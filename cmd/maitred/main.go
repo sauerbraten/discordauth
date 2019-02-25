@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"log"
 	"net"
 	"os"
@@ -28,4 +29,27 @@ func main() {
 
 	<-interrupt
 	close(stop)
+}
+
+func Listen(listenAddr *net.TCPAddr, db *db.Database, stop <-chan struct{}) {
+	listener, err := net.ListenTCP("tcp", listenAddr)
+	if err != nil {
+		log.Printf("error starting to listen on %s: %v", listenAddr, err)
+	}
+
+	for {
+		conn, err := listener.AcceptTCP()
+		if err != nil {
+			log.Printf("error accepting connection: %v", err)
+		}
+
+		s := &AuthServer{
+			conn:        conn,
+			in:          bufio.NewScanner(conn),
+			db:          db,
+			pendingByID: map[uint]*request{},
+		}
+
+		go s.run(stop)
+	}
 }
