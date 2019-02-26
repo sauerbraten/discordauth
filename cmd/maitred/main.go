@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"log"
 	"net"
 	"os"
@@ -11,12 +10,12 @@ import (
 )
 
 func main() {
-	db, err := db.New("users.sqlite")
+	db, err := db.New("maitred.sqlite")
 	if err != nil {
 		log.Fatalln("error opening users database:", err)
 	}
 
-	addr, err := net.ResolveTCPAddr("tcp", ":28787")
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:28787")
 	if err != nil {
 		log.Fatalln("error starting to listen on 0.0.0.0:28787:", err)
 	}
@@ -43,13 +42,8 @@ func Listen(listenAddr *net.TCPAddr, db *db.Database, stop <-chan struct{}) {
 			log.Printf("error accepting connection: %v", err)
 		}
 
-		s := &AuthServer{
-			conn:        conn,
-			in:          bufio.NewScanner(conn),
-			db:          db,
-			pendingByID: map[uint]*request{},
-		}
+		ch := NewConnHandler(db, conn)
 
-		go s.run(stop)
+		ch.handleFirstMessage(stop)
 	}
 }

@@ -3,11 +3,13 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type Database struct {
+	mutex sync.Mutex // not embedded so that access to Mutex.Lock() and Mutex.Unlock() is not exported
 	*sql.DB
 }
 
@@ -23,6 +25,7 @@ func New(path string) (*Database, error) {
 	}
 
 	return &Database{
-		DB: db,
+		mutex: sync.Mutex{},
+		DB:    db,
 	}, nil
 }

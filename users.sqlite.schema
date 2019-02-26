@@ -1,8 +1,0 @@
-drop table if exists `users`;
-
-create table `users` (
-	`name` text primary key,
-	`pubkey` text not null
-);
-
-create index idx_users_name on `users`(`name`);
