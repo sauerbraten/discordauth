@@ -1,4 +1,5 @@
 all: bootstrap_db
+	go get ./...
 	go build ./cmd/maitred
 	go build ./cmd/manage
 

@@ -14,8 +14,7 @@ tasks:
       mkdir -p src/github.com/sauerbraten
       mv maitred src/github.com/sauerbraten/
   - build: |
-      cd src/github.com/sauerbraten/maitred/cmd/maitred
-      go get
+      cd src/github.com/sauerbraten/maitred
       make all
   - deploy: |
       cd src/github.com/sauerbraten/maitred
