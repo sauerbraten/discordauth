@@ -222,13 +222,14 @@ func (sch *ServerConnHandler) handleStats(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
 
 	var gamemode int64
-	_, err := fmt.Fscanf(r, "%d", &gamemode)
+	var mapname string
+	_, err := fmt.Fscanf(r, "%d %s", &gamemode, &mapname)
 	if err != nil {
 		log.Printf("malformed %s message from game server: '%s': %v", protocol.Stats, args, err)
 		return
 	}
 
-	gameID, err := sch.db.AddGame(sch.server.id, gamemode)
+	gameID, err := sch.db.AddGame(sch.server.id, gamemode, mapname)
 	if err != nil {
 		log.Println(err)
 		return

@@ -1,3 +1,3 @@
-cmd/maitred/maitred
-cmd/maitred/maitred.sqlite
-cmd/manage/manage
+manage
+maitred
+maitred.sqlite

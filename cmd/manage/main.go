@@ -40,8 +40,8 @@ func init() {
 }
 
 func usage() {
-	fmt.Println("Usage: manage add <name> <pubkey>")
-	fmt.Println("       manage del <name>")
+	fmt.Println("Usage: manage addauth <name> <pubkey>")
+	fmt.Println("       manage delauth <name>")
 	os.Exit(1)
 }
 

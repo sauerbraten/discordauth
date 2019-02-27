@@ -27,6 +27,7 @@ create table `games` (
 	`id` integer primary key autoincrement,
 	`server` integer not null references `servers`(`id`),
 	`mode` integer not null,
+	`map` text not null,
 	`ended_at` integer not null default (strftime('%s', 'now')),
 	unique(`server`, `ended_at`)
 );
