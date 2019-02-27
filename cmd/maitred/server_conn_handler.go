@@ -149,7 +149,7 @@ func (sch *ServerConnHandler) handleRegisterServer(args string) {
 	sch.server.id = sch.db.GetServerID(sch.server.addr.IP.String(), sch.server.addr.Port, info.Description, mod)
 	sch.db.UpdateServerLastActive(sch.server.id)
 
-	sch.respond("%s ", protocol.SuccReg) // trailing space because of bug in SVN
+	sch.respond("%s", protocol.SuccReg)
 }
 
 func (sch *ServerConnHandler) handleRequestAuthChallenge(args string) {
