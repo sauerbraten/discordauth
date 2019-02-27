@@ -15,7 +15,7 @@ func main() {
 		log.Fatalln("error opening users database:", err)
 	}
 
-	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:28787")
+	addr, err := net.ResolveTCPAddr("tcp", ":28787")
 	if err != nil {
 		log.Fatalln("error starting to listen on 0.0.0.0:28787:", err)
 	}
