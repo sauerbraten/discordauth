@@ -2,6 +2,7 @@ image: alpine/edge
 packages:
   - go
   - rsync
+  - sqlite
 sources:
   - https://github.com/sauerbraten/maitred.git
 environment:
