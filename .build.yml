@@ -16,13 +16,10 @@ tasks:
   - build: |
       cd src/github.com/sauerbraten/maitred/cmd/maitred
       go get
-      go build
+      make all
   - deploy: |
       cd src/github.com/sauerbraten/maitred
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/maitred'
-      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq maitred.sqlite.schema ci@$DEPLOY:~/maitred/
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd maitred; if [ ! -f maitred.sqlite ] ; then sqlite3 maitred.sqlite < maitred.sqlite.schema ; fi'
-      cd cmd/maitred
-      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq maitred ci@$DEPLOY:~/maitred/
+      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq maitred maitred.sqlite ci@$DEPLOY:~/maitred/
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall maitred || true'
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd maitred; nohup ./maitred >> log.txt 2>&1 &'
