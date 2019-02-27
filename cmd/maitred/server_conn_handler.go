@@ -75,30 +75,27 @@ func (sch *ServerConnHandler) handle(msg string) {
 	args := msg[len(cmd)+1:]
 
 	// unregistered servers have to register themselves before doing anything else
-	if sch.server.id < 0 {
-		if cmd != protocol.RegServ {
-			log.Printf("unregistered server %s sent disallowed command '%s' (args: '%s')", sch.conn.RemoteAddr(), cmd, args)
-			sch.conn.Close()
-			return
-		}
+	if sch.server.id < 0 && cmd != protocol.RegServ {
+		log.Printf("unregistered server %s sent disallowed command '%s' (args: '%s')", sch.conn.RemoteAddr(), cmd, args)
+		sch.conn.Close()
+		return
+	}
+
+	switch cmd {
+	case protocol.RegServ:
 		sch.handleRegisterServer(args)
-	} else {
-		switch cmd {
-		case protocol.RegServ:
-			sch.handleRegisterServer(args)
 
-		case protocol.ReqAuth:
-			sch.handleRequestAuthChallenge(args)
+	case protocol.ReqAuth:
+		sch.handleRequestAuthChallenge(args)
 
-		case protocol.ConfAuth:
-			sch.handleConfirmAuthAnswer(args)
+	case protocol.ConfAuth:
+		sch.handleConfirmAuthAnswer(args)
 
-		case protocol.Stats:
-			sch.handleStats(args)
+	case protocol.Stats:
+		sch.handleStats(args)
 
-		default:
-			log.Printf("no handler for command %s in '%s'", cmd, msg)
-		}
+	default:
+		log.Printf("no handler for command %s in '%s'", cmd, msg)
 	}
 }
 
@@ -154,7 +151,7 @@ func (sch *ServerConnHandler) handleRegisterServer(args string) {
 
 func (sch *ServerConnHandler) handleRequestAuthChallenge(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
-	for len(args) > 0 {
+	for r.Len() > 0 {
 		var requestID uint
 		var name string
 		_, err := fmt.Fscanf(r, "%d %s", &requestID, &name)
@@ -194,7 +191,7 @@ func (sch *ServerConnHandler) generateChallenge(requestID uint, name string) (ch
 
 func (sch *ServerConnHandler) handleConfirmAuthAnswer(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
-	for len(args) > 0 {
+	for r.Len() > 0 {
 		var requestID uint
 		var answer string
 		_, err := fmt.Fscanf(r, "%d %s", &requestID, &answer)
