@@ -232,7 +232,7 @@ func (sch *ServerConnHandler) handleStats(args string) {
 		return
 	}
 
-	for len(args) > 0 {
+	for r.Len() > 0 {
 		var (
 			requestID  uint
 			name       string
@@ -250,17 +250,17 @@ func (sch *ServerConnHandler) handleStats(args string) {
 
 		if authedName, ok := sch.authedUsersByRequest[requestID]; !ok || authedName != name {
 			log.Printf("ignoring stats for unauthenticated user '%s' (request %d)", name, requestID)
-			sch.respond("%s %d %s %s", protocol.FailStats, requestID, name, "user not authenticated")
+			sch.respond("%s %d %s", protocol.FailStats, requestID, "user not authenticated")
 			continue
 		}
 
 		err = sch.db.AddStats(gameID, name, frags, deaths, damage, shotDamage, flags)
 		if err != nil {
 			log.Printf("failed to save stats for '%s' (request %d) in database: %v", name, requestID, err)
-			sch.respond("%s %d %s %s", protocol.FailStats, requestID, name, "internal error")
+			sch.respond("%s %d %s", protocol.FailStats, requestID, "internal error")
 			continue
 		}
 
-		sch.respond("%s %d %s", protocol.SuccStats, requestID, name)
+		sch.respond("%s %d", protocol.SuccStats, requestID)
 	}
 }
