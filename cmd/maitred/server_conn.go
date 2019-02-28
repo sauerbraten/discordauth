@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sauerbraten/maitred/pkg/protocol"
-
 	"github.com/sauerbraten/extinfo"
+
+	"github.com/sauerbraten/maitred/pkg/protocol"
 )
 
 // request holds the data we need to remember between
@@ -26,15 +26,15 @@ type Server struct {
 	addr *net.UDPAddr
 }
 
-type ServerConnHandler struct {
+type ServerConn struct {
 	*ConnHandler
 	server               Server
 	pendingRequests      map[uint]*request
 	authedUsersByRequest map[uint]string
 }
 
-func NewServerConnHandler(ch *ConnHandler) *ServerConnHandler {
-	return &ServerConnHandler{
+func NewServerConn(ch *ConnHandler) *ServerConn {
+	return &ServerConn{
 		ConnHandler:          ch,
 		server:               Server{id: -1},
 		pendingRequests:      map[uint]*request{},
@@ -42,13 +42,13 @@ func NewServerConnHandler(ch *ConnHandler) *ServerConnHandler {
 	}
 }
 
-func (sch *ServerConnHandler) run(stop <-chan struct{}, handle func(string)) {
+func (sc *ServerConn) run(stop <-chan struct{}, handle func(string)) {
 	incoming := make(chan string)
 	go func() {
-		for sch.in.Scan() {
-			incoming <- sch.in.Text()
+		for sc.in.Scan() {
+			incoming <- sc.in.Text()
 		}
-		if err := sch.in.Err(); err != nil {
+		if err := sc.in.Err(); err != nil {
 			log.Println(err)
 		}
 		close(incoming)
@@ -58,98 +58,98 @@ func (sch *ServerConnHandler) run(stop <-chan struct{}, handle func(string)) {
 		select {
 		case msg, ok := <-incoming:
 			if !ok {
-				log.Println(sch.conn.RemoteAddr(), "closed the connection")
+				log.Println(sc.conn.RemoteAddr(), "closed the connection")
 				return
 			}
 			handle(msg)
 		case <-stop:
-			log.Println("closing connection to", sch.conn.RemoteAddr())
-			sch.conn.Close()
+			log.Println("closing connection to", sc.conn.RemoteAddr())
+			sc.conn.Close()
 			return
 		}
 	}
 }
 
-func (sch *ServerConnHandler) handle(msg string) {
+func (sc *ServerConn) handle(msg string) {
 	cmd := strings.Split(msg, " ")[0]
 	args := msg[len(cmd)+1:]
 
 	// unregistered servers have to register themselves before doing anything else
-	if sch.server.id < 0 && cmd != protocol.RegServ {
-		log.Printf("unregistered server %s sent disallowed command '%s' (args: '%s')", sch.conn.RemoteAddr(), cmd, args)
-		sch.conn.Close()
+	if sc.server.id < 0 && cmd != protocol.RegServ {
+		log.Printf("unregistered server %s sent disallowed command '%s' (args: '%s')", sc.conn.RemoteAddr(), cmd, args)
+		sc.conn.Close()
 		return
 	}
 
 	switch cmd {
 	case protocol.RegServ:
-		sch.handleRegisterServer(args)
+		sc.handleRegisterServer(args)
 
 	case protocol.ReqAuth:
-		sch.handleRequestAuthChallenge(args)
+		sc.handleRequestAuthChallenge(args)
 
 	case protocol.ConfAuth:
-		sch.handleConfirmAuthAnswer(args)
+		sc.handleConfirmAuthAnswer(args)
 
 	case protocol.Stats:
-		sch.handleStats(args)
+		sc.handleStats(args)
 
 	default:
 		log.Printf("no handler for command %s in '%s'", cmd, msg)
 	}
 }
 
-func (sch *ServerConnHandler) handleRegisterServer(args string) {
+func (sc *ServerConn) handleRegisterServer(args string) {
 	var port int
 	_, err := fmt.Sscanf(args, "%d", &port)
 	if err != nil {
 		log.Printf("malformed %s message from game server: '%s': %v", protocol.RegServ, args, err)
-		sch.respond("%s %s", protocol.FailReg, "invalid port")
+		sc.respond("%s %s", protocol.FailReg, "invalid port")
 		return
 	}
 
-	ip, _, err := net.SplitHostPort(sch.conn.RemoteAddr().String())
+	ip, _, err := net.SplitHostPort(sc.conn.RemoteAddr().String())
 	if err != nil {
-		log.Printf("error extracting IP from connection to %s: %v", sch.conn.RemoteAddr(), err)
-		sch.respond("%s %s", protocol.FailReg, "internal error")
+		log.Printf("error extracting IP from connection to %s: %v", sc.conn.RemoteAddr(), err)
+		sc.respond("%s %s", protocol.FailReg, "internal error")
 		return
 	}
 
-	sch.server.addr, err = net.ResolveUDPAddr("udp", ip+":"+strconv.Itoa(port))
+	sc.server.addr, err = net.ResolveUDPAddr("udp", ip+":"+strconv.Itoa(port))
 	if err != nil {
 		log.Printf("error resolving UDP address %s: %v", ip+":"+strconv.Itoa(port), err)
-		sch.respond("%s %s", protocol.FailReg, "failed resolving ip")
+		sc.respond("%s %s", protocol.FailReg, "failed resolving ip")
 		return
 	}
 
 	// identify server
-	gameServer, err := extinfo.NewServer(*sch.server.addr, 10*time.Second)
+	gameServer, err := extinfo.NewServer(*sc.server.addr, 10*time.Second)
 	if err != nil {
-		log.Printf("error resolving extinfo UDP address of %s: %v", sch.server.addr, err)
-		sch.respond("%s %s", protocol.FailReg, "failed resolving ip")
+		log.Printf("error resolving extinfo UDP address of %s: %v", sc.server.addr, err)
+		sc.respond("%s %s", protocol.FailReg, "failed resolving ip")
 		return
 	}
 
 	info, err := gameServer.GetBasicInfo()
 	if err != nil {
-		log.Printf("error querying basic info of %s: %v", sch.server.addr, err)
-		sch.respond("%s %s", protocol.FailReg, "failed pinging server")
+		log.Printf("error querying basic info of %s: %v", sc.server.addr, err)
+		sc.respond("%s %s", protocol.FailReg, "failed pinging server")
 		return
 	}
 
 	mod, err := gameServer.GetServerMod()
 	if err != nil {
-		log.Printf("error querying server mod ID of %s: %v", sch.server.addr, err)
+		log.Printf("error querying server mod ID of %s: %v", sc.server.addr, err)
 		// not a problem, don't fail registration
 	}
 
-	sch.server.id = sch.db.GetServerID(sch.server.addr.IP.String(), sch.server.addr.Port, info.Description, mod)
-	sch.db.UpdateServerLastActive(sch.server.id)
+	sc.server.id = sc.db.GetServerID(sc.server.addr.IP.String(), sc.server.addr.Port, info.Description, mod)
+	sc.db.UpdateServerLastActive(sc.server.id)
 
-	sch.respond("%s", protocol.SuccReg)
+	sc.respond("%s", protocol.SuccReg)
 }
 
-func (sch *ServerConnHandler) handleRequestAuthChallenge(args string) {
+func (sc *ServerConn) handleRequestAuthChallenge(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
 	for r.Len() > 0 {
 		var requestID uint
@@ -162,25 +162,25 @@ func (sch *ServerConnHandler) handleRequestAuthChallenge(args string) {
 
 		log.Printf("generating challenge for '%s' (request %d)", name, requestID)
 
-		challenge, err := sch.generateChallenge(requestID, name)
+		challenge, err := sc.generateChallenge(requestID, name)
 		if err != nil {
 			log.Printf("could not generate challenge for request %d (%s): %v", requestID, name, err)
-			sch.respond("%s %d", protocol.FailAuth, requestID)
+			sc.respond("%s %d", protocol.FailAuth, requestID)
 			return
 		}
 
-		sch.respond("%s %d %s", protocol.ChalAuth, requestID, challenge)
+		sc.respond("%s %d %s", protocol.ChalAuth, requestID, challenge)
 	}
 }
 
-func (sch *ServerConnHandler) generateChallenge(requestID uint, name string) (challenge string, err error) {
+func (sc *ServerConn) generateChallenge(requestID uint, name string) (challenge string, err error) {
 	var solution string
-	challenge, solution, err = sch.ConnHandler.generateChallenge(name)
+	challenge, solution, err = sc.ConnHandler.generateChallenge(name)
 	if err != nil {
 		return
 	}
 
-	sch.pendingRequests[requestID] = &request{
+	sc.pendingRequests[requestID] = &request{
 		id:       requestID,
 		name:     name,
 		solution: solution,
@@ -189,7 +189,7 @@ func (sch *ServerConnHandler) generateChallenge(requestID uint, name string) (ch
 	return
 }
 
-func (sch *ServerConnHandler) handleConfirmAuthAnswer(args string) {
+func (sc *ServerConn) handleConfirmAuthAnswer(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
 	for r.Len() > 0 {
 		var requestID uint
@@ -200,22 +200,22 @@ func (sch *ServerConnHandler) handleConfirmAuthAnswer(args string) {
 			return
 		}
 
-		req, ok := sch.pendingRequests[requestID]
+		req, ok := sc.pendingRequests[requestID]
 
 		if ok && answer == req.solution {
-			sch.authedUsersByRequest[requestID] = req.name
-			sch.respond("%s %d", protocol.SuccAuth, requestID)
+			sc.authedUsersByRequest[requestID] = req.name
+			sc.respond("%s %d", protocol.SuccAuth, requestID)
 			log.Println("request", requestID, "completed successfully")
 		} else {
-			sch.respond("%s %d", protocol.FailAuth, requestID)
+			sc.respond("%s %d", protocol.FailAuth, requestID)
 			log.Println("request", requestID, "failed")
 		}
 
-		delete(sch.pendingRequests, requestID)
+		delete(sc.pendingRequests, requestID)
 	}
 }
 
-func (sch *ServerConnHandler) handleStats(args string) {
+func (sc *ServerConn) handleStats(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
 
 	var gamemode int64
@@ -226,7 +226,7 @@ func (sch *ServerConnHandler) handleStats(args string) {
 		return
 	}
 
-	gameID, err := sch.db.AddGame(sch.server.id, gamemode, mapname)
+	gameID, err := sc.db.AddGame(sc.server.id, gamemode, mapname)
 	if err != nil {
 		log.Println(err)
 		return
@@ -248,19 +248,19 @@ func (sch *ServerConnHandler) handleStats(args string) {
 			return
 		}
 
-		if authedName, ok := sch.authedUsersByRequest[requestID]; !ok || authedName != name {
+		if authedName, ok := sc.authedUsersByRequest[requestID]; !ok || authedName != name {
 			log.Printf("ignoring stats for unauthenticated user '%s' (request %d)", name, requestID)
-			sch.respond("%s %d %s", protocol.FailStats, requestID, "user not authenticated")
+			sc.respond("%s %d %s", protocol.FailStats, requestID, "user not authenticated")
 			continue
 		}
 
-		err = sch.db.AddStats(gameID, name, frags, deaths, damage, shotDamage, flags)
+		err = sc.db.AddStats(gameID, name, frags, deaths, damage, shotDamage, flags)
 		if err != nil {
 			log.Printf("failed to save stats for '%s' (request %d) in database: %v", name, requestID, err)
-			sch.respond("%s %d %s", protocol.FailStats, requestID, "internal error")
+			sc.respond("%s %d %s", protocol.FailStats, requestID, "internal error")
 			continue
 		}
 
-		sch.respond("%s %d", protocol.SuccStats, requestID)
+		sc.respond("%s %d", protocol.SuccStats, requestID)
 	}
 }

@@ -8,10 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sauerbraten/maitred/pkg/protocol"
-
 	"github.com/sauerbraten/maitred/internal/db"
 	"github.com/sauerbraten/maitred/pkg/auth"
+	"github.com/sauerbraten/maitred/pkg/protocol"
 )
 
 type ConnHandler struct {
@@ -28,37 +27,37 @@ func NewConnHandler(db *db.Database, conn *net.TCPConn) *ConnHandler {
 	}
 }
 
-func (h *ConnHandler) handleFirstMessage(stop <-chan struct{}) {
-	if !h.in.Scan() {
-		log.Println("error handling first message:", h.in.Err())
+func (ch *ConnHandler) handleFirstMessage(stop <-chan struct{}) {
+	if !ch.in.Scan() {
+		log.Println("error handling first message:", ch.in.Err())
 		return
 	}
 
-	msg := h.in.Text()
+	msg := ch.in.Text()
 
 	log.Println("received first message", msg)
 
 	if strings.HasPrefix(msg, protocol.ReqAdmin) {
-		ach := NewAdminConnHandler(h)
-		go ach.run(stop, ach.handle)
-		ach.handle(msg)
+		ac := NewAdminConn(ch)
+		go ac.run(stop, ac.handle)
+		ac.handle(msg)
 	} else if strings.HasPrefix(msg, protocol.RegServ) {
-		sch := NewServerConnHandler(h)
-		go sch.run(stop, sch.handle)
-		sch.handle(msg)
+		sc := NewServerConn(ch)
+		go sc.run(stop, sc.handle)
+		sc.handle(msg)
 	} else {
 		log.Printf("unexpected first message '%s'", msg)
 	}
 }
 
-// called by wrapping types AdminConnHandler and ServerConnHandler
-func (h *ConnHandler) run(stop <-chan struct{}, handle func(string)) {
+// called by wrapping types AdminConn and ServerConn
+func (ch *ConnHandler) run(stop <-chan struct{}, handle func(string)) {
 	incoming := make(chan string)
 	go func() {
-		for h.in.Scan() {
-			incoming <- h.in.Text()
+		for ch.in.Scan() {
+			incoming <- ch.in.Text()
 		}
-		if err := h.in.Err(); err != nil {
+		if err := ch.in.Err(); err != nil {
 			log.Println(err)
 		}
 		close(incoming)
@@ -68,23 +67,23 @@ func (h *ConnHandler) run(stop <-chan struct{}, handle func(string)) {
 		select {
 		case msg, ok := <-incoming:
 			if !ok {
-				log.Println(h.conn.RemoteAddr(), "closed the connection")
+				log.Println(ch.conn.RemoteAddr(), "closed the connection")
 				return
 			}
 			handle(msg)
 		case <-stop:
-			log.Println("closing connection to", h.conn.RemoteAddr())
-			h.conn.Close()
+			log.Println("closing connection to", ch.conn.RemoteAddr())
+			ch.conn.Close()
 			return
 		}
 	}
 }
 
-func (h *ConnHandler) respond(format string, args ...interface{}) {
+func (ch *ConnHandler) respond(format string, args ...interface{}) {
 	response := fmt.Sprintf(format, args...)
 	log.Println("responding with", response)
-	h.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	_, err := h.conn.Write([]byte(response + "\n"))
+	ch.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	_, err := ch.conn.Write([]byte(response + "\n"))
 	if err != nil {
 		log.Printf("failed to send '%s': %v", response, err)
 	}
