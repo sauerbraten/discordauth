@@ -18,7 +18,8 @@ create index idx_servers_descr on `servers`(`description`);
 create table `users` (
 	`name` text primary key,
 	`pubkey` text not null,
-	`admin`integer not null default 0
+	`admin` integer not null default 0,
+	`last_authed` integer not null default (strftime('%s', 'now'))
 );
 
 create index idx_users_name on `users`(`name`);
