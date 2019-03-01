@@ -1,13 +1,11 @@
 # Maître d′
 
-An auth server for [Cube 2: Sauerbraten](http://sauerbraten.org/).
+A master server for [Cube 2: Sauerbraten](http://sauerbraten.org/) that supports centralized stats collection.
 
 
 ## Why?
 
-This auth server is usable by Sauerbraten game servers like a master server, except that it only understands auth related parts of the protocol, i.e.: `reqauth` and `confauth`. It responds the same way the masterserver at sauerbraten.org would respond to gauth requests (`chalauth`, `succauth`, `failauth`).
-
-It is intended to be used by game servers for a specific auth key domain. The game server decides what privileges, if any, to grant authenticated users of that domain.
+This master server allows Sauerbraten game servers to authenticate clients with its auth key domain and to report the statistics of authenticated players at the end of a game. It is usable by game servers like the original/vanilla master server, except that it does not keep a server list and does not respond to `list`. The game server decides what privileges, if any, to grant users that it successfully authenticated with this master server.
 
 
 ## Adding auth keys
