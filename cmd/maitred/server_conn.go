@@ -83,13 +83,13 @@ func (sc *ServerConn) handle(msg string) {
 
 	switch cmd {
 	case protocol.RegServ:
-		sc.handleRegisterServer(args)
+		sc.handleRegServ(args)
 
 	case protocol.ReqAuth:
-		sc.handleRequestAuthChallenge(args)
+		sc.handleReqAuth(args)
 
 	case protocol.ConfAuth:
-		sc.handleConfirmAuthAnswer(args)
+		sc.handleConfAuth(args)
 
 	case protocol.Stats:
 		sc.handleStats(args)
@@ -99,7 +99,7 @@ func (sc *ServerConn) handle(msg string) {
 	}
 }
 
-func (sc *ServerConn) handleRegisterServer(args string) {
+func (sc *ServerConn) handleRegServ(args string) {
 	var port int
 	_, err := fmt.Sscanf(args, "%d", &port)
 	if err != nil {
@@ -122,7 +122,6 @@ func (sc *ServerConn) handleRegisterServer(args string) {
 		return
 	}
 
-	// identify server
 	gameServer, err := extinfo.NewServer(*sc.server.addr, 10*time.Second)
 	if err != nil {
 		log.Printf("error resolving extinfo UDP address of %s: %v", sc.server.addr, err)
@@ -149,7 +148,7 @@ func (sc *ServerConn) handleRegisterServer(args string) {
 	sc.respond("%s", protocol.SuccReg)
 }
 
-func (sc *ServerConn) handleRequestAuthChallenge(args string) {
+func (sc *ServerConn) handleReqAuth(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
 	for r.Len() > 0 {
 		var requestID uint
@@ -189,7 +188,7 @@ func (sc *ServerConn) generateChallenge(requestID uint, name string) (challenge 
 	return
 }
 
-func (sc *ServerConn) handleConfirmAuthAnswer(args string) {
+func (sc *ServerConn) handleConfAuth(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
 	for r.Len() > 0 {
 		var requestID uint
