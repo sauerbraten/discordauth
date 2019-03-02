@@ -2,4 +2,6 @@ manage
 !manage/
 maitred
 !maitred/
+stats
+!stats/
 maitred.sqlite

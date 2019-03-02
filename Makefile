@@ -2,9 +2,10 @@ all: bootstrap_db
 	go get ./...
 	go build ./cmd/maitred
 	go build ./cmd/manage
+	go build ./cmd/stats
 
 clean:
-	rm -f maitred.sqlite ./maitred ./manage
+	rm -f maitred.sqlite ./maitred ./manage ./stats
 
 bootstrap_db:
 	if [ ! -f maitred.sqlite ];	then \

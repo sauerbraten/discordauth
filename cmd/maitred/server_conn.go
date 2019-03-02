@@ -233,15 +233,15 @@ func (sc *ServerConn) handleStats(args string) {
 
 	for r.Len() > 0 {
 		var (
-			requestID  uint
-			name       string
-			frags      int64
-			deaths     int64
-			damage     int64
-			shotDamage int64
-			flags      int64
+			requestID uint
+			name      string
+			frags     int64
+			deaths    int64
+			damage    int64
+			potential int64
+			flags     int64
 		)
-		_, err := fmt.Fscanf(r, "%d %s %d %d %d %d %d", &requestID, &name, &frags, &deaths, &damage, &shotDamage, &flags)
+		_, err := fmt.Fscanf(r, "%d %s %d %d %d %d %d", &requestID, &name, &frags, &deaths, &damage, &potential, &flags)
 		if err != nil {
 			log.Printf("error scanning user stats: %v", err)
 			return
@@ -249,11 +249,11 @@ func (sc *ServerConn) handleStats(args string) {
 
 		if authedName, ok := sc.authedUsersByRequest[requestID]; !ok || authedName != name {
 			log.Printf("ignoring stats for unauthenticated user '%s' (request %d)", name, requestID)
-			sc.respond("%s %d %s", protocol.FailStats, requestID, "user not authenticated")
+			sc.respond("%s %d %s", protocol.FailStats, requestID, "not authenticated")
 			continue
 		}
 
-		err = sc.db.AddStats(gameID, name, frags, deaths, damage, shotDamage, flags)
+		err = sc.db.AddStats(gameID, name, frags, deaths, damage, potential, flags)
 		if err != nil {
 			log.Printf("failed to save stats for '%s' (request %d) in database: %v", name, requestID, err)
 			sc.respond("%s %d %s", protocol.FailStats, requestID, "internal error")

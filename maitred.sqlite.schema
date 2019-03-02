@@ -39,7 +39,7 @@ create table `stats` (
 	`frags` integer not null,
 	`deaths` integer not null,
 	`damage` integer not null,
-	`shotdamage` integer not null,
+	`potential` integer not null,
 	`flags` integer not null,
 	unique(`game`, `user`)
 );

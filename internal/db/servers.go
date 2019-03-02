@@ -47,7 +47,6 @@ func (db *Database) UpdateServerLastActive(serverID int64) {
 	}
 }
 
-/*
 type Server struct {
 	ID          int64  `json:"id"`
 	IP          string `json:"ip"`
@@ -57,6 +56,7 @@ type Server struct {
 	LastUpdated int64  `json:"last_updated,omitempty"`
 }
 
+/*
 func (db *Database) FindServerByDescription(desc string) []Server {
 	desc = strings.Replace(desc, " ", "", -1)         // remove spaces
 	desc = strings.Join(strings.Split(desc, ""), "%") // place '%' SQLite wildcard between characters

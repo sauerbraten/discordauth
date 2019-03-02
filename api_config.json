@@ -1,0 +1,10 @@
+{
+	// SQlite database file name
+	"db_file_path": "./maitred.sqlite",
+
+
+	// Web interface
+
+	// address for the web interface to listen on
+	"web_interface_address": "localhost:8083"
+}
