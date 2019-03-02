@@ -19,7 +19,7 @@ tasks:
       make all
   - deploy: |
       cd src/github.com/sauerbraten/maitred
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall maitred || true'
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/maitred'
       rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq maitred maitred.sqlite ci@$DEPLOY:~/maitred/
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall maitred || true'
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd maitred; nohup ./maitred >> log.txt 2>&1 &'
