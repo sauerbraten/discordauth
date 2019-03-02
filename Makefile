@@ -14,4 +14,5 @@ bootstrap_db:
 		sqlite3 maitred.sqlite "insert into users (name, pubkey) values ('miu', '+ae6b173130fb836b5260ae11e30bee912e1ab0b35916c843');"; \
 		sqlite3 maitred.sqlite "insert into users (name, pubkey) values ('Frosty', '+99be4d5a3f77076eb20978797d43bd9ccf94b39e03a5cb2');"; \
 		sqlite3 maitred.sqlite "insert into users (name, pubkey) values ('Tagger', '+a1e915b99c0a2cc5a1b3590377e04bdc490f46fab7a7fc00');"; \
+		sqlite3 maitred.sqlite "insert into users (name, pubkey) values ('Murrr', '-8836a84f75db88f28b4dda4394ccd3ad77a1a556cc58169f');"; \
 	fi \
