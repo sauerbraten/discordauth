@@ -24,4 +24,4 @@ tasks:
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/maitred'
       rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq maitred maitred.sqlite stats api_config.json ci@$DEPLOY:~/maitred/
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd maitred; nohup ./maitred >> log.txt 2>&1 &'
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd maitred; nohup ./stats >> log.txt 2>&1 &'
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd maitred; nohup ./stats >> log.api.txt 2>&1 &'
