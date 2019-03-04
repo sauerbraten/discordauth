@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/sauerbraten/maitred/internal/db"
 )
@@ -41,6 +42,9 @@ func Listen(listenAddr *net.TCPAddr, db *db.Database, stop <-chan struct{}) {
 		if err != nil {
 			log.Printf("error accepting connection: %v", err)
 		}
+
+		conn.SetKeepAlive(true)
+		conn.SetKeepAlivePeriod(2 * time.Minute)
 
 		ch := NewConnHandler(db, conn)
 
