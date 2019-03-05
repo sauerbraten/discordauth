@@ -16,6 +16,7 @@ tasks:
       mv maitred src/github.com/sauerbraten/
   - build: |
       cd src/github.com/sauerbraten/maitred
+      make clean
       make all
   - deploy: |
       cd src/github.com/sauerbraten/maitred
