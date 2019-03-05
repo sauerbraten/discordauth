@@ -22,7 +22,7 @@ tasks:
       cd src/github.com/sauerbraten/maitred
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/maitred'
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall maitred || true'
-      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq maitred ci@$DEPLOY:~/maitred/
+      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq maitred maitred.sqlite ci@$DEPLOY:~/maitred/
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd maitred; nohup ./maitred >> log.txt 2>&1 &'
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall stats || true'
       rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq stats api_config.json ci@$DEPLOY:~/maitred/
