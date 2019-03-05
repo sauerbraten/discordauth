@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+
 	"github.com/sauerbraten/maitred/internal/db"
 )
 
@@ -19,6 +21,8 @@ func NewAPI(db *db.Database) *API {
 		Router: chi.NewRouter(),
 		db:     db,
 	}
+
+	a.Use(middleware.SetHeader("Content-Type", "application/json; charset=utf-8"))
 
 	a.HandleFunc("/player/{name}", a.player)
 
