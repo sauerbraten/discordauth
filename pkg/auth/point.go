@@ -38,7 +38,7 @@ func parsePoint(s string) (x, y *big.Int, err error) {
 	y2.Sub(xxx, threeX).Add(y2, p192.B) // x^3 - 3*x + B
 	y.ModSqrt(y2, p192.P)               // find a square root
 
-	if s[0] == '-' && y.Bit(0) == 1 {
+	if s[0] == '-' && y.Bit(0) == 0 {
 		y.Neg(y)
 	}
 
