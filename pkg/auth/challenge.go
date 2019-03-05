@@ -12,7 +12,7 @@ func GenerateChallenge(pub PublicKey) (challenge, solution string, err error) {
 	challenge = encodePoint(x, y)
 
 	// what the client should return if she applies her private key to the challenge
-	// (see SolveChallenge())
+	// (see Solve below)
 	solX, _ := p192.ScalarMult(pub.x, pub.y, secret)
 	solution = solX.Text(16)
 
