@@ -22,8 +22,6 @@ create table `users` (
 	`last_authed` integer not null default (strftime('%s', 'now'))
 );
 
-create index idx_users_name on `users`(`name`);
-
 create table `games` (
 	`id` integer primary key autoincrement,
 	`server` integer not null references `servers`(`id`),
