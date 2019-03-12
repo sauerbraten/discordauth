@@ -27,19 +27,28 @@ func (db *Database) GetPublicKey(name string) (pubkey auth.PublicKey, err error)
 	defer db.mutex.Unlock()
 
 	var _pubkey string
-	err = db.
-		QueryRow("select `pubkey` from `users` where `name` = ?", name).
-		Scan(&_pubkey)
+	err = db.QueryRow("select `pubkey` from `users` where `name` = ?", name).Scan(&_pubkey)
 	if err != nil {
-		err = fmt.Errorf("db: error retrieving public key of '%s' from database: %v", name, err)
+		err = fmt.Errorf("db: error retrieving public key of '%s': %v", name, err)
 		return
 	}
 
 	pubkey, err = auth.ParsePublicKey(_pubkey)
 	if err != nil {
-		err = fmt.Errorf("db: error parsing public key '%s' from database: %v", _pubkey, err)
+		err = fmt.Errorf("db: error parsing public key '%s': %v", _pubkey, err)
 	}
 	return
+}
+
+func (db *Database) UpdateUserLastAuthed(name string) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	_, err := db.Exec("update `users` set `last_authed` = ? where `name` = ?", name)
+	if err != nil {
+		return fmt.Errorf("db: error updating 'last_authed' field of user '%s': %v", name, err)
+	}
+	return nil
 }
 
 func (db *Database) DelUser(name string) error {
@@ -48,7 +57,7 @@ func (db *Database) DelUser(name string) error {
 
 	_, err := db.Exec("delete from `users` where `name` = ?", name)
 	if err != nil {
-		return fmt.Errorf("db: error deleting '%s' from database: %v", name, err)
+		return fmt.Errorf("db: error deleting '%s': %v", name, err)
 	}
 	return nil
 }

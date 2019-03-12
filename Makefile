@@ -1,11 +1,4 @@
-all: bootstrap_db
-	go get ./...
-	go build ./cmd/maitred
-	go build ./cmd/manage
-	go build ./cmd/stats
-
-clean:
-	rm -f maitred.sqlite ./maitred ./manage ./stats
+all: bootstrap_db dependencies maitred manage stats
 
 bootstrap_db:
 	if [ ! -f maitred.sqlite ];	then \
@@ -18,3 +11,21 @@ bootstrap_db:
 		sqlite3 maitred.sqlite "insert or ignore into users (name, pubkey) values ('Murrr', '-8836a84f75db88f28b4dda4394ccd3ad77a1a556cc58169f');"; \
 		sqlite3 maitred.sqlite "insert or ignore into users (name, pubkey) values ('Redon', '-efa043131ca8e8f68ed98cfcc069ee2d8fac00f0a5b523f7');"; \
 	fi \
+
+dependencies:
+	go get ./...
+
+maitred:
+	go build ./cmd/maitred
+
+manage:
+	go build ./cmd/manage
+
+stats:
+	go build ./cmd/stats
+
+clean:
+	rm -f ./maitred ./manage ./stats
+
+purge: clean
+	rm -f maitred.sqlite

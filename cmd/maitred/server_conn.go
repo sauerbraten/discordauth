@@ -205,6 +205,10 @@ func (sc *ServerConn) handleConfAuth(args string) {
 			sc.authedUsersByRequest[requestID] = req.name
 			sc.respond("%s %d", protocol.SuccAuth, requestID)
 			log.Println("request", requestID, "completed successfully")
+			err := sc.db.UpdateUserLastAuthed(req.name)
+			if err != nil {
+				log.Println(err)
+			}
 		} else {
 			sc.respond("%s %d", protocol.FailAuth, requestID)
 			log.Println("request", requestID, "failed")

@@ -2,8 +2,6 @@ package db
 
 import (
 	"fmt"
-
-	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 )
 
 func (db *Database) AddStats(gameID int64, user string, frags, deaths, damage, potential, flags int64) error {
@@ -20,26 +18,20 @@ func (db *Database) AddStats(gameID int64, user string, frags, deaths, damage, p
 	return nil
 }
 
-type Game struct {
-	ID   int    `json:"id"`
-	Mode string `json:"mode"`
-	Map  string `json:"map"`
-}
-
 type Stats struct {
-	Game      Game `json:"game"`
-	Frags     int  `json:"frags"`
-	Deaths    int  `json:"deaths"`
-	Damage    int  `json:"damage"`
-	Potential int  `json:"potential"`
-	Flags     int  `json:"flags"`
+	Game      int64 `json:"game_id"`
+	Frags     int   `json:"frags"`
+	Deaths    int   `json:"deaths"`
+	Damage    int   `json:"damage"`
+	Potential int   `json:"potential"`
+	Flags     int   `json:"flags"`
 }
 
 func (db *Database) GetStats(user string) ([]Stats, error) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	rows, err := db.Query("select `id`, `mode`, `map`, `frags`, `deaths`, `damage`, `potential`, `flags` from `stats`, `games` on `stats`.`game` = `games`.`id` where `user` = ?", user)
+	rows, err := db.Query("select `game`, `frags`, `deaths`, `damage`, `potential`, `flags` from `stats` where `user` = ?", user)
 	if err != nil {
 		return nil, fmt.Errorf("db: error getting stats of user %s: %v", user, err)
 	}
@@ -49,9 +41,10 @@ func (db *Database) GetStats(user string) ([]Stats, error) {
 
 	for rows.Next() {
 		s := Stats{}
-		var _mode gamemode.ID
-		rows.Scan(&s.Game.ID, &_mode, &s.Game.Map, &s.Frags, &s.Deaths, &s.Damage, &s.Potential, &s.Flags)
-		s.Game.Mode = _mode.String()
+		err = rows.Scan(&s.Game, &s.Frags, &s.Deaths, &s.Damage, &s.Potential, &s.Flags)
+		if err != nil {
+			return nil, fmt.Errorf("db: error scanning row from 'stats' table: %v", err)
+		}
 		stats = append(stats, s)
 	}
 
