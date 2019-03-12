@@ -44,7 +44,7 @@ func (db *Database) UpdateUserLastAuthed(name string) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	_, err := db.Exec("update `users` set `last_authed` = ? where `name` = ?", name)
+	_, err := db.Exec("update `users` set `last_authed` = strftime('%s', 'now') where `name` = ?", name)
 	if err != nil {
 		return fmt.Errorf("db: error updating 'last_authed' field of user '%s': %v", name, err)
 	}
