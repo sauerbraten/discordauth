@@ -86,14 +86,15 @@ func (a *API) userStats(resp http.ResponseWriter, req *http.Request) {
 }
 
 func (a *API) stats(resp http.ResponseWriter, req *http.Request) {
-	// todo: ?game ?mode ?map ?sortBy
+	// todo: ?game ?mode ?map (?sortBy)
 
-	resp.WriteHeader(http.StatusNotImplemented)
-	err := json.NewEncoder(resp).Encode(struct {
-		Error string `json:"error"`
-	}{
-		Error: "not yet implemented",
-	})
+	stats, err := a.db.GetAllStats()
+	if err != nil {
+		respondWithError(resp, http.StatusInternalServerError, err)
+		return
+	}
+
+	err = json.NewEncoder(resp).Encode(stats)
 	if err != nil {
 		log.Println(err)
 	}
