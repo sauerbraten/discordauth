@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 
 	"github.com/sauerbraten/maitred/internal/db"
 )
@@ -34,9 +35,21 @@ func NewAPI(db *db.Database) *API {
 }
 
 func (a *API) games(resp http.ResponseWriter, req *http.Request) {
-	// todo: ?user ?mode ?map
+	user, _mode, mapname := chi.URLParam(req, "user"), chi.URLParam(req, "mode"), chi.URLParam(req, "map")
 
-	games, err := a.db.GetAllGames()
+	var (
+		mode = int64(-1)
+		err  error
+	)
+	if _mode != "" {
+		mode, err = strconv.ParseInt(_mode, 10, 64)
+		if err != nil {
+			respondWithError(resp, http.StatusBadRequest, err)
+			return
+		}
+	}
+
+	games, err := a.db.GetAllGames(user, gamemode.ID(mode), mapname)
 	if err != nil {
 		respondWithError(resp, http.StatusInternalServerError, err)
 		return
@@ -50,6 +63,7 @@ func (a *API) games(resp http.ResponseWriter, req *http.Request) {
 
 func (a *API) game(resp http.ResponseWriter, req *http.Request) {
 	_id := chi.URLParam(req, "id")
+
 	id, err := strconv.ParseInt(_id, 10, 64)
 	if err != nil {
 		respondWithError(resp, http.StatusBadRequest, err)
@@ -69,11 +83,24 @@ func (a *API) game(resp http.ResponseWriter, req *http.Request) {
 }
 
 func (a *API) userStats(resp http.ResponseWriter, req *http.Request) {
-	// todo: ?game ?mode ?map
+	name, _game, _mode, mapname := chi.URLParam(req, "name"), chi.URLParam(req, "game"), chi.URLParam(req, "mode"), chi.URLParam(req, "map")
 
-	name := chi.URLParam(req, "name")
+	game, err := strconv.ParseInt(_game, 10, 64)
+	if err != nil {
+		respondWithError(resp, http.StatusBadRequest, err)
+		return
+	}
 
-	stats, err := a.db.GetStats(name)
+	mode := int64(-1)
+	if _mode != "" {
+		mode, err = strconv.ParseInt(_mode, 10, 64)
+		if err != nil {
+			respondWithError(resp, http.StatusBadRequest, err)
+			return
+		}
+	}
+
+	stats, err := a.db.GetStats(name, game, gamemode.ID(mode), mapname)
 	if err != nil {
 		respondWithError(resp, http.StatusInternalServerError, err)
 		return

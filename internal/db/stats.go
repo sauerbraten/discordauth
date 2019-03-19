@@ -2,6 +2,9 @@ package db
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 )
 
 func (db *Database) AddStats(gameID int64, user string, frags, deaths, damage, potential, flags int64) error {
@@ -27,7 +30,7 @@ type Stats struct {
 	Flags     int    `json:"flags"`
 }
 
-func (db *Database) GetStats(user string) (Stats, error) {
+func (db *Database) GetStats(user string, game int64, mode gamemode.ID, mapname string) (Stats, error) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -35,8 +38,33 @@ func (db *Database) GetStats(user string) (Stats, error) {
 		User: user,
 	}
 
+	args := []interface{}{}
+
+	innerQuery := "`stats`"
+	if mode > -1 || mapname != "" {
+		wheres := []string{}
+		if mode > -1 {
+			wheres = append(wheres, "`mode` = ?")
+			args = append(args, mode)
+		}
+		if mapname != "" {
+			wheres = append(wheres, "`map` = ?")
+			args = append(args, mapname)
+		}
+
+		innerQuery = "(select from `stats` where `game` in (select `id` from `games` where " + strings.Join(wheres, " and ") + "))"
+	}
+
+	wheres := []string{"`user` = ?"}
+	args = append(args, user)
+
+	if game != 0 {
+		wheres = append(wheres, "`game` = ?")
+		args = append(args, game)
+	}
+
 	err := db.
-		QueryRow("select total(`frags`), total(`deaths`), total(`damage`), total(`potential`), total(`flags`) from `stats` where `user` = ?", user).
+		QueryRow("select total(`frags`), total(`deaths`), total(`damage`), total(`potential`), total(`flags`) from "+innerQuery+" where "+strings.Join(wheres, " and "), args...).
 		Scan(&s.Frags, &s.Deaths, &s.Damage, &s.Potential, &s.Flags)
 	if err != nil {
 		return s, fmt.Errorf("db: error retrieving stats of user %s: %v", user, err)
