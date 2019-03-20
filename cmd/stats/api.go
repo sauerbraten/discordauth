@@ -34,19 +34,9 @@ func NewAPI(db *db.Database) *API {
 }
 
 func (a *API) games(resp http.ResponseWriter, req *http.Request) {
-	user, _mode, mapname := req.FormValue("user"), req.FormValue("mode"), req.FormValue("map")
+	user, mode, mapname := req.FormValue("user"), req.FormValue("mode"), req.FormValue("map")
 
-	mode := int64(-1)
-	if _mode != "" {
-		var err error
-		mode, err = strconv.ParseInt(_mode, 10, 64)
-		if err != nil {
-			respondWithError(resp, http.StatusBadRequest, err)
-			return
-		}
-	}
-
-	games, err := a.db.GetAllGames(user, gamemode.ID(mode), mapname)
+	games, err := a.db.GetAllGames(user, gamemode.Parse(mode), mapname)
 	if err != nil {
 		respondWithError(resp, http.StatusInternalServerError, err)
 		return
