@@ -37,8 +37,6 @@ func (db *Database) GetStats(user string, game int64, mode gamemode.ID, mapname 
 
 	args := []interface{}{}
 
-	from := "from `stats`"
-
 	wheres := []string{}
 	if game > -1 {
 		wheres = append(wheres, "`game` = ?")
@@ -65,7 +63,7 @@ func (db *Database) GetStats(user string, game int64, mode gamemode.ID, mapname 
 		where = "where " + strings.Join(wheres, " and ")
 	}
 
-	rows, err := db.Query(fmt.Sprintln("select `user`, count(`game`), total(`frags`), total(`deaths`), total(`damage`), total(`potential`), total(`flags`)", from, where, "group by `user`"), args...)
+	rows, err := db.Query(fmt.Sprintln("select `user`, count(`game`), total(`frags`), total(`deaths`), total(`damage`), total(`potential`), total(`flags`) from `stats`", where, "group by `user`"), args...)
 	if err != nil {
 		return nil, fmt.Errorf("db: error getting all users' stats: %v", err)
 	}

@@ -33,12 +33,6 @@ func (db *Database) GetAllGames(user string, mode gamemode.ID, mapname string) (
 
 	args := []interface{}{}
 
-	innerQuery := "`games`"
-	if user != "" {
-		innerQuery = "(select `game` from `stats` where `user` = ?)"
-		args = append(args, user)
-	}
-
 	wheres := []string{}
 	if mode > -1 {
 		wheres = append(wheres, "`mode` = ?")
@@ -48,13 +42,17 @@ func (db *Database) GetAllGames(user string, mode gamemode.ID, mapname string) (
 		wheres = append(wheres, "`map` = ?")
 		args = append(args, mapname)
 	}
+	if user != "" {
+		wheres = append(wheres, "`id` in (select `game` from `stats` where `user` = ?)")
+		args = append(args, user)
+	}
 
 	where := ""
 	if len(wheres) > 0 {
 		where = "where " + strings.Join(wheres, " and ")
 	}
 
-	rows, err := db.Query("select `id`, `server`, `mode`, `map`, `ended_at` from "+innerQuery+" "+where, args...)
+	rows, err := db.Query("select `id`, `server`, `mode`, `map`, `ended_at` from `games` "+where, args...)
 	if err != nil {
 		return nil, fmt.Errorf("db: error retrieving all games: %v", err)
 	}
