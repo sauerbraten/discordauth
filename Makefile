@@ -1,3 +1,5 @@
+.PHONY: all bootstrap_db dependencies maitred manage stats clean purge
+
 all: bootstrap_db dependencies maitred manage stats
 
 bootstrap_db:

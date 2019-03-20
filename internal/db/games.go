@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 )
@@ -26,11 +27,34 @@ func (db *Database) AddGame(serverID, mode int64, mapname string) (int64, error)
 	return res.LastInsertId()
 }
 
-func (db *Database) GetAllGames() ([]Game, error) {
+func (db *Database) GetAllGames(user string, mode gamemode.ID, mapname string) ([]Game, error) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	rows, err := db.Query("select `id`, `server`, `mode`, `map`, `ended_at` from `games`")
+	args := []interface{}{}
+
+	innerQuery := "`games`"
+	if user != "" {
+		innerQuery = "(select `game` from `stats` where `user` = ?)"
+		args = append(args, user)
+	}
+
+	wheres := []string{}
+	if mode > -1 {
+		wheres = append(wheres, "`mode` = ?")
+		args = append(args, mode)
+	}
+	if mapname != "" {
+		wheres = append(wheres, "`map` = ?")
+		args = append(args, mapname)
+	}
+
+	where := ""
+	if len(wheres) > 0 {
+		where = "where " + strings.Join(wheres, " and ")
+	}
+
+	rows, err := db.Query("select `id`, `server`, `mode`, `map`, `ended_at` from "+innerQuery+" "+where, args...)
 	if err != nil {
 		return nil, fmt.Errorf("db: error retrieving all games: %v", err)
 	}

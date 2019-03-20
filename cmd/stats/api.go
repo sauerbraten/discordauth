@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
 
 	"github.com/sauerbraten/maitred/internal/db"
 )
@@ -28,15 +29,24 @@ func NewAPI(db *db.Database) *API {
 	a.HandleFunc("/games", a.games)
 	a.HandleFunc("/game/{id}", a.game)
 	a.HandleFunc("/stats", a.stats)
-	a.HandleFunc("/stats/{name}", a.userStats)
 
 	return a
 }
 
 func (a *API) games(resp http.ResponseWriter, req *http.Request) {
-	// todo: ?user ?mode ?map
+	user, _mode, mapname := req.FormValue("user"), req.FormValue("mode"), req.FormValue("map")
 
-	games, err := a.db.GetAllGames()
+	mode := int64(-1)
+	if _mode != "" {
+		var err error
+		mode, err = strconv.ParseInt(_mode, 10, 64)
+		if err != nil {
+			respondWithError(resp, http.StatusBadRequest, err)
+			return
+		}
+	}
+
+	games, err := a.db.GetAllGames(user, gamemode.ID(mode), mapname)
 	if err != nil {
 		respondWithError(resp, http.StatusInternalServerError, err)
 		return
@@ -50,6 +60,7 @@ func (a *API) games(resp http.ResponseWriter, req *http.Request) {
 
 func (a *API) game(resp http.ResponseWriter, req *http.Request) {
 	_id := chi.URLParam(req, "id")
+
 	id, err := strconv.ParseInt(_id, 10, 64)
 	if err != nil {
 		respondWithError(resp, http.StatusBadRequest, err)
@@ -68,27 +79,20 @@ func (a *API) game(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (a *API) userStats(resp http.ResponseWriter, req *http.Request) {
-	// todo: ?game ?mode ?map
-
-	name := chi.URLParam(req, "name")
-
-	stats, err := a.db.GetStats(name)
-	if err != nil {
-		respondWithError(resp, http.StatusInternalServerError, err)
-		return
-	}
-
-	err = json.NewEncoder(resp).Encode(stats)
-	if err != nil {
-		log.Println(err)
-	}
-}
-
 func (a *API) stats(resp http.ResponseWriter, req *http.Request) {
-	// todo: ?game ?mode ?map (?sortBy)
+	user, _game, mode, mapname := req.FormValue("user"), req.FormValue("game"), req.FormValue("mode"), req.FormValue("map")
 
-	stats, err := a.db.GetAllStats()
+	game := int64(-1)
+	if _game != "" {
+		var err error
+		game, err = strconv.ParseInt(_game, 10, 64)
+		if err != nil {
+			respondWithError(resp, http.StatusBadRequest, err)
+			return
+		}
+	}
+
+	stats, err := a.db.GetStats(user, game, gamemode.Parse(mode), mapname)
 	if err != nil {
 		respondWithError(resp, http.StatusInternalServerError, err)
 		return
