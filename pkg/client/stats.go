@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
 
 	"github.com/sauerbraten/maitred/pkg/protocol"
 )

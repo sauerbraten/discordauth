@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/sauerbraten/maitred/pkg/protocol"
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 // request holds the data we need to remember between

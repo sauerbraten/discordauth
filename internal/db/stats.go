@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sauerbraten/waiter/pkg/definitions/gamemode"
+	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
 )
 
 func (db *Database) AddStats(gameID int64, user string, frags, deaths, damage, potential, flags int64) error {

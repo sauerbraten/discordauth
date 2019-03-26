@@ -3,7 +3,7 @@ package auth
 import (
 	"fmt"
 
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 type callbacks struct {

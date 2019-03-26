@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/sauerbraten/maitred/pkg/protocol"
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 type RemoteProvider struct {

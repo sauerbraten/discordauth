@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/sauerbraten/waiter/pkg/definitions/role"
+	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 type Provider interface {
