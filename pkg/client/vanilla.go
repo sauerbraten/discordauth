@@ -82,7 +82,7 @@ func (c *VanillaClient) connect() error {
 		if err := sc.Err(); err != nil {
 			log.Println(err)
 		} else {
-			log.Printf("master (%s): EOF while scanning input", c.raddr)
+			c.Log("EOF while scanning input")
 			if !c.pingFailed {
 				c.reconnect(io.EOF)
 			}
@@ -93,7 +93,7 @@ func (c *VanillaClient) connect() error {
 		for msg := range c.authOut {
 			err := c.Send(msg)
 			if err != nil {
-				log.Printf("master (%s): remote auth: %v", c.raddr, err)
+				c.Log("remote auth: %v", err)
 			}
 		}
 	}()
@@ -109,28 +109,32 @@ func (c *VanillaClient) reconnect(err error) {
 	try, maxTries := 1, 10
 	for err != nil && try <= maxTries {
 		time.Sleep(time.Duration(try) * 30 * time.Second)
-		log.Printf("master (%s): trying to reconnect (attempt %d)", c.raddr, try)
+		c.Log("trying to reconnect (attempt %d)", try)
 
 		err = c.connect()
 		try++
 	}
 
 	if err == nil {
-		log.Printf("master (%s): reconnected successfully", c.raddr)
+		c.Log("reconnected successfully")
 		c.onReconnect()
 	} else {
-		log.Printf("master (%s): could not reconnect: %v", c.raddr, err)
+		c.Log("could not reconnect: %v", err)
 	}
+}
+
+func (c *VanillaClient) Log(format string, args ...interface{}) {
+	log.Println(fmt.Sprintf("master (%s):", c.raddr), fmt.Sprintf(format, args...))
 }
 
 func (c *VanillaClient) Register() {
 	if c.pingFailed {
 		return
 	}
-	log.Printf("master (%s): registering", c.raddr)
+	c.Log("registering")
 	err := c.Send("%s %d", protocol.RegServ, c.listenPort)
 	if err != nil {
-		log.Printf("master (%s): registration failed: %v", c.raddr, err)
+		c.Log("registration failed: %v", err)
 		return
 	}
 }
@@ -142,12 +146,12 @@ func (c *VanillaClient) Send(format string, args ...interface{}) error {
 
 	err := c.conn.SetWriteDeadline(time.Now().Add(10 * time.Millisecond))
 	if err != nil {
-		log.Printf("master (%s): write failed: %v", c.raddr, err)
+		c.Log("write failed: %v", err)
 		return err
 	}
 	_, err = c.conn.Write([]byte(fmt.Sprintf(format+"\n", args...)))
 	if err != nil {
-		log.Printf("master (%s): write failed: %v", c.raddr, err)
+		c.Log("write failed: %v", err)
 	}
 	return err
 }
@@ -158,12 +162,12 @@ func (c *VanillaClient) Handle(msg string) {
 
 	switch cmd {
 	case protocol.SuccReg:
-		log.Printf("master (%s): registration succeeded", c.raddr)
+		c.Log("registration succeeded")
 
 	case protocol.FailReg:
-		log.Printf("master (%s): registration failed: %v", c.raddr, args)
+		c.Log("registration failed: %v", args)
 		if args == "failed pinging server" {
-			log.Printf("master (%s): disabling reconnecting", c.raddr)
+			c.Log("disabling reconnecting")
 			c.pingFailed = true // stop trying
 		}
 
@@ -177,7 +181,7 @@ func (c *VanillaClient) Handle(msg string) {
 		c.authInc <- msg
 
 	default:
-		log.Printf("master (%s): received and not handled: %v", c.raddr, msg)
+		c.Log("received and not handled: %v", msg)
 	}
 }
 
@@ -185,7 +189,7 @@ func (c *VanillaClient) handleAddGlobalBan(args string) {
 	var ip string
 	_, err := fmt.Sscanf(args, "%s", &ip)
 	if err != nil {
-		log.Printf("master (%s): malformed %s message from game server: '%s': %v", c.raddr, protocol.AddBan, args, err)
+		c.Log("malformed %s message from game server: '%s': %v", protocol.AddBan, args, err)
 		return
 	}
 

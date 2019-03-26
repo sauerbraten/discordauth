@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -67,10 +66,10 @@ func (c *AdminClient) handleSuccReg(args string) {
 	c.Client.Handle(protocol.SuccReg)
 
 	if _, ok := os.LookupEnv("STATSAUTH_ADMIN_KEY"); ok {
-		log.Println("trying to upgrade stats server connection")
+		c.Log("trying to upgrade stats server connection")
 		err := c.Client.Send("%s %s", protocol.ReqAdmin, os.Getenv("STATSAUTH_ADMIN_NAME"))
 		if err != nil {
-			log.Printf("could not request admin challenge: %v", err)
+			c.Log("could not request admin challenge: %v", err)
 			return
 		}
 	}
@@ -80,37 +79,37 @@ func (c *AdminClient) handleChalAdmin(args string) {
 	var challenge string
 	_, err := fmt.Sscanf(args, "%s", &challenge)
 	if err != nil {
-		log.Printf("malformed %s message from stats server: '%s': %v", protocol.ChalAdmin, args, err)
+		c.Log("malformed %s message from stats server: '%s': %v", protocol.ChalAdmin, args, err)
 		return
 	}
 
 	answer, err := auth.Solve(challenge, os.Getenv("STATSAUTH_ADMIN_KEY"))
 	if err != nil {
-		log.Printf("could not solve admin challenge: %v", err)
+		c.Log("could not solve admin challenge: %v", err)
 		return
 	}
 
 	err = c.Client.Send("%s %s", protocol.ConfAdmin, answer)
 	if err != nil {
-		log.Printf("could not send answer to admin challenge: %v", err)
+		c.Log("could not send answer to admin challenge: %v", err)
 		return
 	}
 }
 
 func (c *AdminClient) handleSuccAdmin(args string) {
 	c.isAdminConnection = true
-	log.Printf("successfully upgraded stats server connection to admin connection")
+	c.Log("successfully upgraded stats server connection to admin connection")
 }
 
 func (c *AdminClient) handleFailAdmin(args string) {
-	log.Printf("upgrading stats server connection to admin connection failed")
+	c.Log("upgrading stats server connection to admin connection failed")
 }
 
 func (c *AdminClient) handleSuccAddAuth(args string) {
 	var reqID uint32
 	_, err := fmt.Sscanf(args, "%d", &reqID)
 	if err != nil {
-		log.Printf("malformed %s message from stats server: '%s': %v", protocol.SuccAddAuth, args, err)
+		c.Log("malformed %s message from stats server: '%s': %v", protocol.SuccAddAuth, args, err)
 		return
 	}
 
@@ -125,7 +124,7 @@ func (c *AdminClient) handleFailAddAuth(args string) {
 	var reqID uint32
 	_, err := fmt.Fscanf(r, "%d", &reqID)
 	if err != nil {
-		log.Printf("malformed %s message from stats server: '%s': %v", protocol.FailAddAuth, args, err)
+		c.Log("malformed %s message from stats server: '%s': %v", protocol.FailAddAuth, args, err)
 		return
 	}
 	reason := args[len(args)-r.Len():] // unread portion of args

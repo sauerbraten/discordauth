@@ -9,4 +9,5 @@ type Client interface {
 	Register()
 	Send(string, ...interface{}) error
 	Handle(string)
+	Log(string, ...interface{})
 }
