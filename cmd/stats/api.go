@@ -24,11 +24,31 @@ func NewAPI(db *db.Database) *API {
 		db:     db,
 	}
 
-	a.Use(middleware.SetHeader("Content-Type", "application/json; charset=utf-8"))
+	a.HandleFunc("/", func(resp http.ResponseWriter, req *http.Request) {
+		url := func(s string) string { return "http://" + req.Host + "/api" + s }
+		writeln := func(s string) { resp.Write([]byte(s + "\n")) }
 
-	a.HandleFunc("/games", a.games)
-	a.HandleFunc("/game/{id}", a.game)
-	a.HandleFunc("/stats", a.stats)
+		writeln("endpoints:")
+		writeln("- /games ?user ?mode ?map")
+		writeln("- /game/{id}")
+		writeln("- /stats ?game ?user ?mode ?map")
+		writeln("")
+		writeln("examples:")
+		writeln(url("/games"))
+		writeln(url("/games?user=pix"))
+		writeln(url("/games?mode=ectf&map=forge"))
+		writeln(url("/game/1"))
+		writeln(url("/stats"))
+		writeln(url("/stats?user=pix"))
+		writeln(url("/stats?mode=insta"))
+		writeln(url("/stats?mode=ectf&map=forge"))
+	})
+
+	jsonAPI := a.With(middleware.SetHeader("Content-Type", "application/json; charset=utf-8"))
+
+	jsonAPI.HandleFunc("/games", a.games)
+	jsonAPI.HandleFunc("/game/{id}", a.game)
+	jsonAPI.HandleFunc("/stats", a.stats)
 
 	return a
 }

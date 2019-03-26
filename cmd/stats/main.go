@@ -1,12 +1,16 @@
 package main
 
 import (
+	"encoding/hex"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+
+	"github.com/sauerbraten/maitred/pkg/auth"
 )
 
 const gitRevision = "<filled in by CI service>"
@@ -19,26 +23,21 @@ func main() {
 		requestLogging,
 	)
 
-	r.Mount("/", NewAPI(conf.db))
+	r.Mount("/api", NewAPI(conf.db))
 
-	r.HandleFunc("/help", func(resp http.ResponseWriter, req *http.Request) {
-		url := func(s string) string { return "http://" + req.Host + s }
-		writeln := func(s string) { resp.Write([]byte(s + "\n")) }
+	r.HandleFunc("/gen/{name}", func(resp http.ResponseWriter, req *http.Request) {
+		name := chi.URLParam(req, "name")
 
-		writeln("endpoints:")
-		writeln("- /games ?user ?mode ?map")
-		writeln("- /game/{id}")
-		writeln("- /stats ?game ?user ?mode ?map")
-		writeln("")
-		writeln("examples:")
-		writeln(url("/games"))
-		writeln(url("/games?user=pix"))
-		writeln(url("/games?mode=ectf&map=forge"))
-		writeln(url("/game/1"))
-		writeln(url("/stats"))
-		writeln(url("/stats?user=pix"))
-		writeln(url("/stats?mode=insta"))
-		writeln(url("/stats?mode=ectf&map=forge"))
+		priv, pub, err := auth.GenerateKeyPair()
+		if err != nil {
+			resp.Write([]byte(err.Error()))
+			return
+		}
+
+		fmt.Fprintf(resp, "add the following line to your auth.cfg:\n\n authkey \"%s\" \"%s\" \"stats.p1x.pw\"\n\n", name, hex.EncodeToString(priv))
+		fmt.Fprintf(resp, "then, copy and paste these commands and run them in-game:\n\n")
+		fmt.Fprintf(resp, " 1. /autoauth 1; connect p1x.pw\n")
+		fmt.Fprintf(resp, " 2. /servcmd register %s %s\n", name, pub.String())
 	})
 
 	log.Println("server listening on", conf.webInterfaceAddress)
