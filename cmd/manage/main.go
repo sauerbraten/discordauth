@@ -47,8 +47,6 @@ func usage() {
 
 func main() {
 	switch len(os.Args) {
-	case 1, 2:
-		usage()
 	case 3:
 		if os.Args[1] != protocol.DelAuth {
 			usage()
@@ -59,18 +57,28 @@ func main() {
 			usage()
 		}
 		addUser(os.Args[2], os.Args[3])
+	default:
+		usage()
 	}
 }
 
 func addUser(name, pubkey string) {
-	exec(protocol.AddAuth, name, pubkey)
+	resp := exec(protocol.AddAuth, name, pubkey)
+	if resp != protocol.SuccAddAuth {
+		fmt.Fprintln(os.Stderr, "error running", protocol.AddAuth, "command:", resp)
+		os.Exit(5)
+	}
 }
 
 func deleteUser(name string) {
-	exec(protocol.DelAuth, name)
+	resp := exec(protocol.DelAuth, name)
+	if resp != protocol.SuccDelAuth {
+		fmt.Fprintln(os.Stderr, "error running", protocol.DelAuth, "command:", resp)
+		os.Exit(5)
+	}
 }
 
-func exec(cmd string, args ...string) {
+func exec(cmd string, args ...string) string {
 	conn := connect()
 	scanner := bufio.NewScanner(conn)
 
@@ -87,12 +95,8 @@ func exec(cmd string, args ...string) {
 		fmt.Fprintln(os.Stderr, scanner.Err())
 		os.Exit(4)
 	}
-	response := scanner.Text()
 
-	if response != "ok" {
-		fmt.Fprintln(os.Stderr, "error running", cmd, "command:", response)
-		os.Exit(4)
-	}
+	return scanner.Text()
 }
 
 func connect() *net.TCPConn {

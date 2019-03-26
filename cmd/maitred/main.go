@@ -5,9 +5,9 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/sauerbraten/maitred/internal/db"
+	"github.com/sauerbraten/maitred/pkg/server"
 )
 
 func main() {
@@ -21,33 +21,15 @@ func main() {
 		log.Fatalln("error starting to listen on 0.0.0.0:28787:", err)
 	}
 
+	stop := make(chan struct{})
+
+	s := server.New(addr, db, stop)
+
+	go s.Listen()
+
 	interrupt := make(chan os.Signal)
 	signal.Notify(interrupt, os.Interrupt)
 
-	stop := make(chan struct{})
-	go Listen(addr, db, stop)
-
 	<-interrupt
 	close(stop)
-}
-
-func Listen(listenAddr *net.TCPAddr, db *db.Database, stop <-chan struct{}) {
-	listener, err := net.ListenTCP("tcp", listenAddr)
-	if err != nil {
-		log.Printf("error starting to listen on %s: %v", listenAddr, err)
-	}
-
-	for {
-		conn, err := listener.AcceptTCP()
-		if err != nil {
-			log.Printf("error accepting connection: %v", err)
-		}
-
-		conn.SetKeepAlive(true)
-		conn.SetKeepAlivePeriod(2 * time.Minute)
-
-		ch := NewConnHandler(db, conn)
-
-		ch.handleFirstMessage(stop)
-	}
 }

@@ -7,6 +7,9 @@ const (
 	SuccReg = "succreg"
 	FailReg = "failreg"
 
+	AddBan    = "addgban"
+	ClearBans = "cleargbans"
+
 	ReqAuth  = "reqauth"
 	ChalAuth = "chalauth"
 	ConfAuth = "confauth"
@@ -29,6 +32,10 @@ const (
 	SuccAdmin = "succadmin"
 	FailAdmin = "failadmin"
 
-	AddAuth = "addauth"
-	DelAuth = "delauth"
+	AddAuth     = "addauth"
+	SuccAddAuth = "succaddauth"
+	FailAddAuth = "failaddauth"
+	DelAuth     = "delauth"
+	SuccDelAuth = "succdelauth"
+	FailDelAuth = "faildelauth"
 )

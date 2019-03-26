@@ -54,7 +54,7 @@ func (db *Database) GetAllGames(user string, mode gamemode.ID, mapname string) (
 
 	rows, err := db.Query("select `id`, `server`, `mode`, `map`, `ended_at` from `games` "+where, args...)
 	if err != nil {
-		return nil, fmt.Errorf("db: error retrieving all games: %v", err)
+		return nil, fmt.Errorf("db: error retrieving games: %v", err)
 	}
 	defer rows.Close()
 

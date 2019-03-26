@@ -65,7 +65,7 @@ func (db *Database) GetStats(user string, game int64, mode gamemode.ID, mapname 
 
 	rows, err := db.Query(fmt.Sprintln("select `user`, count(`game`), total(`frags`), total(`deaths`), total(`damage`), total(`potential`), total(`flags`) from `stats`", where, "group by `user`"), args...)
 	if err != nil {
-		return nil, fmt.Errorf("db: error getting all users' stats: %v", err)
+		return nil, fmt.Errorf("db: error getting stats: %v", err)
 	}
 	defer rows.Close()
 
