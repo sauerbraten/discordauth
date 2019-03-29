@@ -27,7 +27,7 @@ func (db *Database) GetPublicKey(name string) (pubkey auth.PublicKey, err error)
 	defer db.mutex.Unlock()
 
 	var _pubkey string
-	err = db.QueryRow("select `pubkey` from `users` where `name` = ?", name).Scan(&_pubkey)
+	err = db.Get(&_pubkey, "select `pubkey` from `users` where `name` = ?", name)
 	if err != nil {
 		err = fmt.Errorf("db: error retrieving public key of '%s': %v", name, err)
 		return

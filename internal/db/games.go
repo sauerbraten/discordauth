@@ -9,11 +9,23 @@ import (
 
 type Game struct {
 	ID      int64    `json:"id"`
-	Server  int64    `json:"server_id"`
-	Mode    string   `json:"mode"`
+	Server  int64    `json:"server"`
+	Mode    gmode    `json:"mode"`
 	Map     string   `json:"map"`
 	EndedAt int64    `json:"ended_at"`
 	Players []string `json:"players,omitempty"`
+}
+
+type gmode string
+
+func (m *gmode) Scan(v interface{}) error {
+	_mode, ok := v.(int64)
+	if !ok {
+		return fmt.Errorf("db: can't scan %v (type %T) into game mode field", v, v)
+	}
+	mode := gamemode.ID(_mode)
+	*m = gmode(mode.String())
+	return nil
 }
 
 func (db *Database) AddGame(serverID, mode int64, mapname string) (int64, error) {
@@ -52,26 +64,13 @@ func (db *Database) GetAllGames(user string, mode gamemode.ID, mapname string) (
 		where = "where " + strings.Join(wheres, " and ")
 	}
 
-	rows, err := db.Query("select `id`, `server`, `mode`, `map`, `ended_at` from `games` "+where, args...)
+	games := []Game{}
+
+	err := db.Select(&games, "select `id`, `server`, `mode`, `map`, `ended_at` from `games` "+where, args...)
 	if err != nil {
 		return nil, fmt.Errorf("db: error retrieving games: %v", err)
 	}
-	defer rows.Close()
-
-	games := []Game{}
-
-	for rows.Next() {
-		g := Game{}
-		var _mode gamemode.ID
-		err = rows.Scan(&g.ID, &g.Server, &_mode, &g.Map, &g.EndedAt)
-		if err != nil {
-			return nil, fmt.Errorf("db: error scanning row from 'games' table: %v", err)
-		}
-		g.Mode = _mode.String()
-		games = append(games, g)
-	}
-
-	return games, rows.Err()
+	return games, nil
 }
 
 func (db *Database) GetGame(id int64) (Game, error) {
@@ -79,28 +78,15 @@ func (db *Database) GetGame(id int64) (Game, error) {
 	defer db.mutex.Unlock()
 
 	g := Game{}
-	var _mode gamemode.ID
-	err := db.QueryRow("select `id`, `server`, `mode`, `map`, `ended_at` from `games` where `id` = ?", id).
-		Scan(&g.ID, &g.Server, &_mode, &g.Map, &g.EndedAt)
+	err := db.Get(&g, "select `id`, `server`, `mode`, `map`, `ended_at` from `games` where `id` = ?", id)
 	if err != nil {
 		return g, fmt.Errorf("db: error retrieving game with ID %d: %v", id, err)
 	}
-	g.Mode = _mode.String()
 
-	rows, err := db.Query("select `user` from `stats` where `game` = ?", id)
+	err = db.Select(&g.Players, "select `user` from `stats` where `game` = ?", id)
 	if err != nil {
 		return g, fmt.Errorf("db: error retrieving all players of game with ID %d: %v", id, err)
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var p string
-		err = rows.Scan(&p)
-		if err != nil {
-			return g, fmt.Errorf("db: error scanning `user` column from 'stats' table: %v", err)
-		}
-		g.Players = append(g.Players, p)
-	}
-
-	return g, rows.Err()
+	return g, nil
 }
