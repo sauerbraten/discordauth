@@ -25,7 +25,6 @@ func newClientConn(db *db.Database, conn *net.TCPConn) *clientConn {
 	}
 }
 
-// called by wrapping types Adminconn and Serverconn
 func (cc *clientConn) run(stop <-chan struct{}, handle func(string)) {
 	incoming := make(chan string)
 	go func() {
@@ -57,13 +56,14 @@ func (cc *clientConn) run(stop <-chan struct{}, handle func(string)) {
 func (cc *clientConn) respond(format string, args ...interface{}) {
 	response := fmt.Sprintf(format, args...)
 	log.Println("responding with", response)
-	cc.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	cc.conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
 	_, err := cc.conn.Write([]byte(response + "\n"))
 	if err != nil {
 		log.Printf("failed to send '%s': %v", response, err)
 	}
 }
 
+// todo: move to handler
 func (cc *clientConn) generateChallenge(name string) (challenge, solution string, err error) {
 	pubkey, err := cc.db.GetPublicKey(name)
 	if err != nil {

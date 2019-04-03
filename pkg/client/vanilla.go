@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/sauerbraten/chef/pkg/ips"
-	"github.com/sauerbraten/maitred/pkg/auth"
-	"github.com/sauerbraten/maitred/pkg/protocol"
-
 	"github.com/sauerbraten/waiter/pkg/bans"
 	"github.com/sauerbraten/waiter/pkg/protocol/role"
+
+	"github.com/sauerbraten/maitred/pkg/auth"
+	"github.com/sauerbraten/maitred/pkg/protocol"
 )
 
 type VanillaClient struct {
