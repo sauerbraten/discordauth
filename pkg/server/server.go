@@ -37,8 +37,8 @@ func (s *Server) Listen() {
 		conn.SetKeepAlive(true)
 		conn.SetKeepAlivePeriod(2 * time.Minute)
 
-		sc := newHandler(newClientConn(s.db, conn))
+		h := newHandler(newConn(conn), s.db, s.stop)
 
-		sc.run(s.stop, sc.handle)
+		h.run()
 	}
 }

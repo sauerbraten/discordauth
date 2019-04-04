@@ -10,6 +10,8 @@ import (
 
 	"github.com/sauerbraten/extinfo"
 
+	"github.com/sauerbraten/maitred/internal/db"
+	"github.com/sauerbraten/maitred/pkg/auth"
 	"github.com/sauerbraten/maitred/pkg/protocol"
 )
 
@@ -27,23 +29,72 @@ type client struct {
 }
 
 type handler struct {
-	*clientConn
+	*conn
+	db   *db.Database
+	stop <-chan struct{}
 
 	client               client // the game server this handler is for
 	pendingRequests      map[uint]*request
 	authedUsersByRequest map[uint]string
 
-	adminName string
-	solution  string
-	isAdmin   bool
+	adminReqID uint
+	isAdmin    bool
 }
 
-func newHandler(conn *clientConn) *handler {
+func newHandler(conn *conn, db *db.Database, stop <-chan struct{}) *handler {
 	return &handler{
-		clientConn:           conn,
+		conn:                 conn,
+		db:                   db,
+		stop:                 stop,
 		client:               client{id: -1},
 		pendingRequests:      map[uint]*request{},
 		authedUsersByRequest: map[uint]string{},
+	}
+}
+
+func (h *handler) generateChallenge(name string) (challenge, solution string, err error) {
+	pubkey, err := h.db.GetPublicKey(name)
+	if err != nil {
+		return "", "", err
+	}
+
+	challenge, solution, err = auth.GenerateChallenge(pubkey)
+	if err != nil {
+		err = fmt.Errorf("could not generate challenge using pubkey %s of %s: %v", pubkey, name, err)
+	}
+	return
+}
+
+func (h *handler) makeAndRememberChallenge(reqID uint, name string) (challenge string, err error) {
+	var solution string
+	challenge, solution, err = h.generateChallenge(name)
+	if err != nil {
+		return
+	}
+
+	h.pendingRequests[reqID] = &request{
+		id:       reqID,
+		name:     name,
+		solution: solution,
+	}
+
+	return
+}
+
+func (h *handler) run() {
+	for {
+		select {
+		case msg, ok := <-h.incoming:
+			if !ok {
+				log.Println(h.tcpConn.RemoteAddr(), "closed the connection")
+				return
+			}
+			h.handle(msg)
+		case <-h.stop:
+			log.Println("closing connection to", h.tcpConn.RemoteAddr())
+			h.tcpConn.Close()
+			return
+		}
 	}
 }
 
@@ -53,8 +104,8 @@ func (h *handler) handle(msg string) {
 
 	// unregistered servers have to register themselves before doing anything else
 	if h.client.id < 0 && cmd != protocol.RegServ {
-		log.Printf("unregistered server %s sent disallowed command '%s' (args: '%s')", h.conn.RemoteAddr(), cmd, args)
-		h.conn.Close()
+		log.Printf("unregistered server %s sent disallowed command '%s' (args: '%s')", h.tcpConn.RemoteAddr(), cmd, args)
+		h.tcpConn.Close()
 		return
 	}
 
@@ -101,9 +152,9 @@ func (h *handler) handleRegServ(args string) {
 		return
 	}
 
-	ip, _, err := net.SplitHostPort(h.conn.RemoteAddr().String())
+	ip, _, err := net.SplitHostPort(h.tcpConn.RemoteAddr().String())
 	if err != nil {
-		log.Printf("error extracting IP from connection to %s: %v", h.conn.RemoteAddr(), err)
+		log.Printf("error extracting IP from connection to %s: %v", h.tcpConn.RemoteAddr(), err)
 		h.respond("%s %s", protocol.FailReg, "internal error")
 		return
 	}
@@ -144,70 +195,54 @@ func (h *handler) handleRegServ(args string) {
 func (h *handler) handleReqAuth(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
 	for r.Len() > 0 {
-		var requestID uint
+		var reqID uint
 		var name string
-		_, err := fmt.Fscanf(r, "%d %s", &requestID, &name)
+		_, err := fmt.Fscanf(r, "%d %s", &reqID, &name)
 		if err != nil {
 			log.Printf("malformed %s message from game server: '%s': %v", protocol.ReqAuth, args, err)
 			return
 		}
 
-		log.Printf("generating challenge for '%s' (request %d)", name, requestID)
+		log.Printf("generating challenge for '%s' (request %d)", name, reqID)
 
-		challenge, err := h.generateChallenge(requestID, name)
+		challenge, err := h.makeAndRememberChallenge(reqID, name)
 		if err != nil {
-			log.Printf("could not generate challenge for request %d (%s): %v", requestID, name, err)
-			h.respond("%s %d", protocol.FailAuth, requestID)
+			log.Printf("could not generate challenge for request %d (%s): %v", reqID, name, err)
+			h.respond("%s %d", protocol.FailAuth, reqID)
 			return
 		}
 
-		h.respond("%s %d %s", protocol.ChalAuth, requestID, challenge)
+		h.respond("%s %d %s", protocol.ChalAuth, reqID, challenge)
 	}
-}
-
-func (h *handler) generateChallenge(requestID uint, name string) (challenge string, err error) {
-	var solution string
-	challenge, solution, err = h.clientConn.generateChallenge(name)
-	if err != nil {
-		return
-	}
-
-	h.pendingRequests[requestID] = &request{
-		id:       requestID,
-		name:     name,
-		solution: solution,
-	}
-
-	return
 }
 
 func (h *handler) handleConfAuth(args string) {
 	r := strings.NewReader(strings.TrimSpace(args))
 	for r.Len() > 0 {
-		var requestID uint
+		var reqID uint
 		var answer string
-		_, err := fmt.Fscanf(r, "%d %s", &requestID, &answer)
+		_, err := fmt.Fscanf(r, "%d %s", &reqID, &answer)
 		if err != nil {
 			log.Printf("malformed %s message from game server: '%s': %v", protocol.ConfAuth, args, err)
 			return
 		}
 
-		req, ok := h.pendingRequests[requestID]
+		req, ok := h.pendingRequests[reqID]
 
 		if ok && answer == req.solution {
-			h.authedUsersByRequest[requestID] = req.name
-			h.respond("%s %d", protocol.SuccAuth, requestID)
-			log.Println("request", requestID, "completed successfully")
+			h.authedUsersByRequest[reqID] = req.name
+			h.respond("%s %d", protocol.SuccAuth, reqID)
+			log.Println("request", reqID, "completed successfully")
 			err := h.db.UpdateUserLastAuthed(req.name)
 			if err != nil {
 				log.Println(err)
 			}
 		} else {
-			h.respond("%s %d", protocol.FailAuth, requestID)
-			log.Println("request", requestID, "failed")
+			h.respond("%s %d", protocol.FailAuth, reqID)
+			log.Println("request", reqID, "failed")
 		}
 
-		delete(h.pendingRequests, requestID)
+		delete(h.pendingRequests, reqID)
 	}
 }
 
@@ -230,7 +265,7 @@ func (h *handler) handleStats(args string) {
 
 	for r.Len() > 0 {
 		var (
-			requestID uint
+			reqID     uint
 			name      string
 			frags     int64
 			deaths    int64
@@ -238,69 +273,100 @@ func (h *handler) handleStats(args string) {
 			potential int64
 			flags     int64
 		)
-		_, err := fmt.Fscanf(r, "%d %s %d %d %d %d %d", &requestID, &name, &frags, &deaths, &damage, &potential, &flags)
+		_, err := fmt.Fscanf(r, "%d %s %d %d %d %d %d", &reqID, &name, &frags, &deaths, &damage, &potential, &flags)
 		if err != nil {
 			log.Printf("error scanning user stats: %v", err)
 			return
 		}
 
-		if authedName, ok := h.authedUsersByRequest[requestID]; !ok || authedName != name {
-			log.Printf("ignoring stats for unauthenticated user '%s' (request %d)", name, requestID)
-			h.respond("%s %d %s", protocol.FailStats, requestID, "not authenticated")
+		if authedName, ok := h.authedUsersByRequest[reqID]; !ok || authedName != name {
+			log.Printf("ignoring stats for unauthenticated user '%s' (request %d)", name, reqID)
+			h.respond("%s %d %s", protocol.FailStats, reqID, "not authenticated")
 			continue
 		}
 
 		err = h.db.AddStats(gameID, name, frags, deaths, damage, potential, flags)
 		if err != nil {
-			log.Printf("failed to save stats for '%s' (request %d) in database: %v", name, requestID, err)
-			h.respond("%s %d %s", protocol.FailStats, requestID, "internal error")
+			log.Printf("failed to save stats for '%s' (request %d) in database: %v", name, reqID, err)
+			h.respond("%s %d %s", protocol.FailStats, reqID, "internal error")
 			continue
 		}
 
-		h.respond("%s %d", protocol.SuccStats, requestID)
+		h.respond("%s %d", protocol.SuccStats, reqID)
 	}
 }
 
 func (h *handler) handleReqAdmin(args string) {
+	var reqID uint
 	var adminName string
-	_, err := fmt.Sscanf(args, "%s", &adminName)
+	_, err := fmt.Sscanf(args, "%d %s", &reqID, &adminName)
 	if err != nil {
 		log.Printf("malformed %s message from game server: '%s': %v", protocol.ReqAdmin, args, err)
-		h.conn.Close()
+		h.respond("%s %d %s", protocol.FailAdmin, reqID, err.Error())
+		h.tcpConn.Close()
 		return
 	}
 
-	challenge, solution, err := h.clientConn.generateChallenge(adminName)
+	challenge, err := h.makeAndRememberChallenge(reqID, adminName)
 	if err != nil {
 		log.Printf("could not generate challenge to authenticate '%s' as admin: %v", adminName, err)
-		h.conn.Close()
+		h.respond("%s %d %s", protocol.FailAdmin, reqID, err.Error())
+		h.tcpConn.Close()
 		return
 	}
 
-	h.adminName = adminName
-	h.solution = solution
+	h.adminReqID = reqID
 
-	h.respond("%s %s", protocol.ChalAdmin, challenge)
+	h.respond("%s %d %s", protocol.ChalAdmin, reqID, challenge)
 }
 
 func (h *handler) handleConfAdmin(args string) {
-	var solution string
-	_, err := fmt.Sscanf(args, "%s", &solution)
+	log.Println("confirming admin request:", args)
+
+	var reqID uint
+	var answer string
+
+	fail := func(reason string) {
+		log.Println("request", reqID, "failed:", reason)
+		h.respond("%s %d %s", protocol.FailAdmin, reqID, reason)
+		h.tcpConn.Close()
+	}
+
+	_, err := fmt.Sscanf(args, "%d %s", &reqID, &answer)
 	if err != nil {
 		log.Printf("malformed %s message from game server: '%s': %v", protocol.ConfAdmin, args, err)
-		h.respond("%s %s", protocol.FailAdmin, "could not parse solution")
-		h.conn.Close()
+		fail("could not parse solution")
 		return
 	}
 
-	if solution == h.solution {
-		h.isAdmin = true
-		h.respond("%s", protocol.SuccAdmin)
-		log.Printf("connection from %s successfully authenticated as admin '%s'", h.conn.RemoteAddr(), h.adminName)
-	} else {
-		h.respond("%s", protocol.FailAdmin)
-		h.conn.Close()
-		log.Printf("connection from %s failed to authenticate as admin '%s'", h.conn.RemoteAddr(), h.adminName)
+	defer delete(h.pendingRequests, reqID)
+
+	if reqID != h.adminReqID {
+		fail("not an admin request")
+		return
+	}
+
+	req, ok := h.pendingRequests[reqID]
+	if !ok {
+		fail("unknown request")
+		return
+	}
+
+	if answer != req.solution {
+		log.Printf("connection from %s failed to authenticate as admin '%s'", h.tcpConn.RemoteAddr(), req.name)
+		fail("wrong answer")
+		return
+	}
+
+	log.Println("request", reqID, "completed successfully")
+	log.Printf("connection from %s successfully authenticated as admin '%s'", h.tcpConn.RemoteAddr(), req.name)
+	h.isAdmin = true
+	h.authedUsersByRequest[reqID] = req.name
+	h.respond("%s %d", protocol.SuccAdmin, reqID)
+
+	err = h.db.UpdateUserLastAuthed(req.name)
+	if err != nil {
+		log.Println(err)
 	}
 }
 
@@ -312,7 +378,7 @@ func (h *handler) handleAddAuth(args string) {
 	_, err := fmt.Sscanf(args, "%d %s %s", &reqID, &name, &pubkey)
 	if err != nil {
 		log.Printf("malformed %s message from game server: '%s': %v", protocol.AddAuth, args, err)
-		h.conn.Close()
+		h.tcpConn.Close()
 		return
 	}
 
@@ -324,7 +390,7 @@ func (h *handler) handleAddAuth(args string) {
 	}
 
 	h.respond("%s %d", protocol.SuccAddAuth, reqID)
-	log.Printf("admin '%s' (%s) added auth entry '%s' (pubkey '%s')", h.adminName, h.conn.RemoteAddr(), name, pubkey)
+	log.Printf("admin '%s' (%s) added auth entry '%s' (pubkey '%s')", h.authedUsersByRequest[h.adminReqID], h.tcpConn.RemoteAddr(), name, pubkey)
 }
 
 func (h *handler) handleDelAuth(args string) {
@@ -332,7 +398,7 @@ func (h *handler) handleDelAuth(args string) {
 	_, err := fmt.Sscanf(args, "%s", &name)
 	if err != nil {
 		log.Printf("malformed %s message from game server: '%s': %v", protocol.DelAuth, args, err)
-		h.conn.Close()
+		h.tcpConn.Close()
 		return
 	}
 
@@ -344,5 +410,5 @@ func (h *handler) handleDelAuth(args string) {
 	}
 
 	h.respond(protocol.SuccDelAuth)
-	log.Printf("admin '%s' (%s) deleted auth entry '%s'", h.adminName, h.conn.RemoteAddr(), name)
+	log.Printf("admin '%s' (%s) deleted auth entry '%s'", h.authedUsersByRequest[h.adminReqID], h.tcpConn.RemoteAddr(), name)
 }

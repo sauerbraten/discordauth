@@ -67,7 +67,7 @@ func (c *AdminClient) handleSuccReg(args string) {
 
 	if _, ok := os.LookupEnv("STATSAUTH_ADMIN_KEY"); ok {
 		c.Log("trying to upgrade stats server connection")
-		err := c.Client.Send("%s %s", protocol.ReqAdmin, os.Getenv("STATSAUTH_ADMIN_NAME"))
+		err := c.Client.Send("%s %d %s", protocol.ReqAdmin, c.ids.Next(), os.Getenv("STATSAUTH_ADMIN_NAME"))
 		if err != nil {
 			c.Log("could not request admin challenge: %v", err)
 			return
@@ -76,8 +76,9 @@ func (c *AdminClient) handleSuccReg(args string) {
 }
 
 func (c *AdminClient) handleChalAdmin(args string) {
+	var reqID uint
 	var challenge string
-	_, err := fmt.Sscanf(args, "%s", &challenge)
+	_, err := fmt.Sscanf(args, "%d %s", &reqID, &challenge)
 	if err != nil {
 		c.Log("malformed %s message from stats server: '%s': %v", protocol.ChalAdmin, args, err)
 		return
@@ -89,7 +90,7 @@ func (c *AdminClient) handleChalAdmin(args string) {
 		return
 	}
 
-	err = c.Client.Send("%s %s", protocol.ConfAdmin, answer)
+	err = c.Client.Send("%s %d %s", protocol.ConfAdmin, reqID, answer)
 	if err != nil {
 		c.Log("could not send answer to admin challenge: %v", err)
 		return
@@ -102,7 +103,14 @@ func (c *AdminClient) handleSuccAdmin(args string) {
 }
 
 func (c *AdminClient) handleFailAdmin(args string) {
-	c.Log("upgrading stats server connection to admin connection failed")
+	var reqID uint
+	var reason string
+	_, err := fmt.Sscanf(args, "%d %s", &reqID, &reason)
+	if err != nil {
+		c.Log("malformed %s message from stats server: '%s': %v", protocol.FailAdmin, args, err)
+		return
+	}
+	c.Log("upgrading stats server connection to admin connection failed: %s", reason)
 }
 
 func (c *AdminClient) handleSuccAddAuth(args string) {

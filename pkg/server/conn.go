@@ -6,74 +6,41 @@ import (
 	"log"
 	"net"
 	"time"
-
-	"github.com/sauerbraten/maitred/internal/db"
-	"github.com/sauerbraten/maitred/pkg/auth"
 )
 
-type clientConn struct {
-	db   *db.Database
-	conn *net.TCPConn
-	in   *bufio.Scanner
+type conn struct {
+	tcpConn  *net.TCPConn
+	incoming chan string
 }
 
-func newClientConn(db *db.Database, conn *net.TCPConn) *clientConn {
-	return &clientConn{
-		db:   db,
-		conn: conn,
-		in:   bufio.NewScanner(conn),
+func newConn(tcpConn *net.TCPConn) *conn {
+	c := &conn{
+		tcpConn:  tcpConn,
+		incoming: make(chan string),
 	}
+
+	go c.run()
+
+	return c
 }
 
-func (cc *clientConn) run(stop <-chan struct{}, handle func(string)) {
-	incoming := make(chan string)
-	go func() {
-		for cc.in.Scan() {
-			incoming <- cc.in.Text()
-		}
-		if err := cc.in.Err(); err != nil {
-			log.Println(err)
-		}
-		close(incoming)
-	}()
-
-	for {
-		select {
-		case msg, ok := <-incoming:
-			if !ok {
-				log.Println(cc.conn.RemoteAddr(), "closed the connection")
-				return
-			}
-			handle(msg)
-		case <-stop:
-			log.Println("closing connection to", cc.conn.RemoteAddr())
-			cc.conn.Close()
-			return
-		}
+func (c *conn) run() {
+	sc := bufio.NewScanner(c.tcpConn)
+	for sc.Scan() {
+		c.incoming <- sc.Text()
 	}
+	if err := sc.Err(); err != nil {
+		log.Println(err)
+	}
+	close(c.incoming)
 }
 
-func (cc *clientConn) respond(format string, args ...interface{}) {
+func (c *conn) respond(format string, args ...interface{}) {
 	response := fmt.Sprintf(format, args...)
 	log.Println("responding with", response)
-	cc.conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
-	_, err := cc.conn.Write([]byte(response + "\n"))
+	c.tcpConn.SetWriteDeadline(time.Now().Add(3 * time.Second))
+	_, err := c.tcpConn.Write([]byte(response + "\n"))
 	if err != nil {
 		log.Printf("failed to send '%s': %v", response, err)
 	}
-}
-
-// todo: move to handler
-func (cc *clientConn) generateChallenge(name string) (challenge, solution string, err error) {
-	pubkey, err := cc.db.GetPublicKey(name)
-	if err != nil {
-		return "", "", err
-	}
-
-	challenge, solution, err = auth.GenerateChallenge(pubkey)
-	if err != nil {
-		err = fmt.Errorf("could not generate challenge using pubkey %s of %s: %v", pubkey, name, err)
-	}
-
-	return
 }
