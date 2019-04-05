@@ -7,19 +7,15 @@ sources:
   - https://github.com/sauerbraten/maitred.git
 environment:
   DEPLOY: p1x.pw
-  GOPATH: $HOME
 secrets:
   - 41a695fb-4229-450d-9aa4-5499f6bcea81 # ci@p1x.pw ssh key
 tasks:
-  - prepare_gopath: |
-      mkdir -p src/github.com/sauerbraten
-      mv maitred src/github.com/sauerbraten/
   - build: |
-      cd src/github.com/sauerbraten/maitred
+      cd maitred
       make clean
       make all
   - deploy: |
-      cd src/github.com/sauerbraten/maitred
+      cd maitred
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/maitred'
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall maitred || true'
       rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq maitred migrations ci@$DEPLOY:~/maitred/
