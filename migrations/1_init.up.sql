@@ -1,8 +1,3 @@
-drop table if exists `stats`;
-drop table if exists `games`;
-drop table if exists `users`;
-drop table if exists `servers`;
-
 create table `servers` (
 	`id` integer primary key autoincrement,
 	`ip` integer not null,
@@ -19,7 +14,8 @@ create table `users` (
 	`name` text primary key,
 	`pubkey` text not null,
 	`admin` integer not null default 0,
-	`last_authed` integer not null default (strftime('%s', 'now'))
+	`created_at` integer not null default (strftime('%s', 'now')),
+	`last_authed_at` integer not null default 0
 );
 
 create table `games` (
