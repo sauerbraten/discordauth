@@ -55,6 +55,8 @@ func main() {
 		fmt.Fprintf(resp, "+++ THIS IS ALPHA ZONE! ACCOUNTS ARE LOST AT EACH SERVER RESTART! +++")
 	})
 
+	r.Mount("/", http.FileServer(http.Dir("./public")))
+
 	log.Println("server listening on", conf.webInterfaceAddress)
 	err := http.ListenAndServe(conf.webInterfaceAddress, r)
 	if err != nil {
