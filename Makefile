@@ -15,7 +15,7 @@ stats:
 # utility targets
 
 clean:
-	rm -f ./maitred ./manage ./stats
+	rm -f ./maitred ./manage ./stats ./maitred.sqlite
 
 rebuild_db:
 	if [ -f maitred.sqlite ]; then rm maitred.sqlite; fi
