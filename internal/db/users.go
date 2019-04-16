@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/sauerbraten/maitred/pkg/auth"
@@ -9,6 +10,21 @@ import (
 type User struct {
 	Name      string         `json:"name"`
 	PublicKey auth.PublicKey `json:"public_key"`
+}
+
+func (db *Database) UserExists(name string) (bool, error) {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	var _name string
+	err := db.Get(&_name, "select `name` from `users` where `name` = ?", name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, fmt.Errorf("db: error looking up user name '%s' in database: %v", name, err)
+	}
+	return _name == name, nil
 }
 
 func (db *Database) AddUser(name, pubkey string) error {

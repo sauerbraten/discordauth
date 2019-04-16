@@ -12,7 +12,7 @@ func (db *Database) GetServerID(ip string, port int, description, mod string) (s
 	defer db.mutex.Unlock()
 
 	var oldDescription, oldMod string
-	err := db.QueryRow("select `id`, `description`, `mod` from `servers` where `ip` = ? and `port` = ?", ip, port).Scan(&serverID, &oldDescription, &oldMod)
+	err := db.QueryRowx("select `id`, `description`, `mod` from `servers` where `ip` = ? and `port` = ?", ip, port).Scan(&serverID, &oldDescription, &oldMod)
 
 	if err == sql.ErrNoRows {
 		res, err := db.Exec("insert into `servers` (`ip`, `port`, `description`, `mod`) values (?, ?, ?, ?)", ip, port, description, mod)

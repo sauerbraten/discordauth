@@ -39,3 +39,10 @@ const (
 	SuccDelAuth = "succdelauth"
 	FailDelAuth = "faildelauth"
 )
+
+// other non-standard commands
+const (
+	Lookup     = "lookup" // could be used for name protection
+	SuccLookup = "succlookup"
+	FailLookup = "faillookup"
+)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strconv"
 	"strings"
 	"time"
 
@@ -122,6 +121,9 @@ func (h *handler) handle(msg string) {
 	case protocol.Stats:
 		h.handleStats(args)
 
+	case protocol.Lookup:
+		h.handleLookup(args)
+
 	case protocol.ReqAdmin:
 		h.handleReqAdmin(args)
 
@@ -152,16 +154,16 @@ func (h *handler) handleRegServ(args string) {
 		return
 	}
 
-	ip, _, err := net.SplitHostPort(h.tcpConn.RemoteAddr().String())
-	if err != nil {
-		log.Printf("error extracting IP from connection to %s: %v", h.tcpConn.RemoteAddr(), err)
-		h.respond("%s %s", protocol.FailReg, "internal error")
-		return
+	serverTCPAddr, _ := net.ResolveTCPAddr(h.tcpConn.RemoteAddr().Network(), h.tcpConn.RemoteAddr().String())
+
+	serverUDPAddr := &net.UDPAddr{
+		IP:   serverTCPAddr.IP,
+		Port: port,
 	}
 
-	h.client.addr, err = net.ResolveUDPAddr("udp", ip+":"+strconv.Itoa(port))
+	h.client.addr, err = net.ResolveUDPAddr(serverUDPAddr.Network(), serverUDPAddr.String())
 	if err != nil {
-		log.Printf("error resolving UDP address %s: %v", ip+":"+strconv.Itoa(port), err)
+		log.Printf("error resolving UDP address %s: %v", serverUDPAddr, err)
 		h.respond("%s %s", protocol.FailReg, "failed resolving ip")
 		return
 	}
@@ -293,6 +295,32 @@ func (h *handler) handleStats(args string) {
 		}
 
 		h.respond("%s %d", protocol.SuccStats, reqID)
+	}
+}
+
+func (h *handler) handleLookup(args string) {
+	var reqID uint
+	var name string
+	_, err := fmt.Sscanf(args, "%d %s", &reqID, &name)
+	if err != nil {
+		log.Printf("malformed %s message from game server: '%s': %v", protocol.Lookup, args, err)
+		h.respond("%s %d %s", protocol.FailLookup, reqID, err.Error())
+		h.tcpConn.Close()
+		return
+	}
+
+	exists, err := h.db.UserExists(name)
+	if err != nil {
+		log.Printf("failed to look up '%s' (request %d) in database: %v", name, reqID, err)
+		h.respond("%s %d %s", protocol.FailLookup, reqID, "internal error")
+		h.tcpConn.Close()
+		return
+	}
+
+	if exists {
+		h.respond("%s %d", protocol.SuccLookup, reqID)
+	} else {
+		h.respond("%s %d %s", protocol.FailLookup, reqID, "user does not exist")
 	}
 }
 
