@@ -13,12 +13,15 @@ tasks:
   - build: |
       cd maitred
       make all
-  - deploy: |
+  - deploy_master: |
       cd maitred
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/maitred'
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall maitred || true'
       rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq maitred migrations ci@$DEPLOY:~/maitred/
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall maitred || true'
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd maitred; nohup ./maitred >> log.txt 2>&1 &'
+  - deploy_api: |
+      cd maitred
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/stats'
+      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq stats api_config.json public ci@$DEPLOY:~/stats/
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall stats || true'
-      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq stats api_config.json public ci@$DEPLOY:~/maitred/
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd maitred; nohup ./stats >> log.api.txt 2>&1 &'
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd stats; nohup ./stats >> log.api.txt 2>&1 &'
