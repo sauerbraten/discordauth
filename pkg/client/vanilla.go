@@ -19,7 +19,7 @@ type VanillaClient struct {
 	listenPort int
 	bans       *bans.BanManager
 
-	conn       *conn
+	*conn
 	pingFailed bool
 
 	*auth.RemoteProvider
@@ -30,7 +30,7 @@ type VanillaClient struct {
 }
 
 // New connects to the specified master server. Bans received from the master server are added to the given ban manager.
-func NewVanilla(addr string, listenPort int, bans *bans.BanManager, authRole role.ID, onReconnect func()) (*VanillaClient, <-chan string, error) {
+func NewVanilla(addr string, listenPort int, bans *bans.BanManager, authRole role.ID, onReconnect func()) (*VanillaClient, error) {
 	if onReconnect == nil {
 		onReconnect = func() {}
 	}
@@ -50,7 +50,7 @@ func NewVanilla(addr string, listenPort int, bans *bans.BanManager, authRole rol
 
 	raddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("master (%s): error resolving server address (%s): %v", addr, addr, err)
+		return nil, fmt.Errorf("master (%s): error resolving server address (%s): %v", addr, addr, err)
 	}
 
 	onConnect := func() {
@@ -70,10 +70,9 @@ func NewVanilla(addr string, listenPort int, bans *bans.BanManager, authRole rol
 		}
 	}
 
-	var inc <-chan string
-	c.conn, inc = newConn(raddr, onConnect, onDisconnect)
+	c.conn = newConn(raddr, onConnect, onDisconnect)
 
-	return c, inc, nil
+	return c, nil
 }
 
 func (c *VanillaClient) Start() {
@@ -107,10 +106,6 @@ func (c *VanillaClient) reconnect(err error) {
 
 func (c *VanillaClient) Log(format string, args ...interface{}) {
 	log.Println(fmt.Sprintf("master (%s):", c.conn.addr), fmt.Sprintf(format, args...))
-}
-
-func (c *VanillaClient) Send(format string, args ...interface{}) {
-	c.conn.Send(fmt.Sprintf(format, args...))
 }
 
 func (c *VanillaClient) Register() {

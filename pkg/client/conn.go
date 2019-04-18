@@ -12,16 +12,14 @@ type conn struct {
 	onConnect func()
 }
 
-func newConn(addr *net.TCPAddr, onConnect func(), onDisconnect func(error)) (*conn, <-chan string) {
-	pConn, inc := protocol.NewConn(onDisconnect)
+func newConn(addr *net.TCPAddr, onConnect func(), onDisconnect func(error)) *conn {
+	pConn := protocol.NewConn(onDisconnect)
 
-	c := &conn{
+	return &conn{
 		addr:      addr,
 		Conn:      pConn,
 		onConnect: onConnect,
 	}
-
-	return c, inc
 }
 
 func (c *conn) connect() error {
