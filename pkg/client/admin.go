@@ -26,11 +26,7 @@ func NewAdmin(client Client) *AdminClient {
 
 func (c *AdminClient) AddAuth(name, pubkey string, callback func(string)) {
 	reqID := c.ids.Next()
-	err := c.Send("%s %d %s %s", protocol.AddAuth, reqID, name, pubkey)
-	if err != nil {
-		callback(err.Error())
-		return
-	}
+	c.Send("%s %d %s %s", protocol.AddAuth, reqID, name, pubkey)
 	c.callbacks[reqID] = callback
 }
 
@@ -67,11 +63,7 @@ func (c *AdminClient) handleSuccReg(args string) {
 
 	if _, ok := os.LookupEnv("STATSAUTH_ADMIN_KEY"); ok {
 		c.Log("trying to upgrade stats server connection")
-		err := c.Client.Send("%s %d %s", protocol.ReqAdmin, c.ids.Next(), os.Getenv("STATSAUTH_ADMIN_NAME"))
-		if err != nil {
-			c.Log("could not request admin challenge: %v", err)
-			return
-		}
+		c.Client.Send("%s %d %s", protocol.ReqAdmin, c.ids.Next(), os.Getenv("STATSAUTH_ADMIN_NAME"))
 	}
 }
 
@@ -90,11 +82,7 @@ func (c *AdminClient) handleChalAdmin(args string) {
 		return
 	}
 
-	err = c.Client.Send("%s %d %s", protocol.ConfAdmin, reqID, answer)
-	if err != nil {
-		c.Log("could not send answer to admin challenge: %v", err)
-		return
-	}
+	c.Client.Send("%s %d %s", protocol.ConfAdmin, reqID, answer)
 }
 
 func (c *AdminClient) handleSuccAdmin(args string) {

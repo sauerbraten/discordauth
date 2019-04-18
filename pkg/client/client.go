@@ -7,7 +7,7 @@ import (
 type Client interface {
 	auth.Provider
 	Register()
-	Send(string, ...interface{}) error
+	Send(string, ...interface{})
 	Handle(string)
 	Log(string, ...interface{})
 }

@@ -1,9 +1,7 @@
 package client
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"strings"
@@ -18,12 +16,10 @@ import (
 )
 
 type VanillaClient struct {
-	raddr      *net.TCPAddr
 	listenPort int
 	bans       *bans.BanManager
 
-	conn       *net.TCPConn
-	inc        chan<- string
+	conn       *conn
 	pingFailed bool
 
 	*auth.RemoteProvider
@@ -35,20 +31,15 @@ type VanillaClient struct {
 
 // New connects to the specified master server. Bans received from the master server are added to the given ban manager.
 func NewVanilla(addr string, listenPort int, bans *bans.BanManager, authRole role.ID, onReconnect func()) (*VanillaClient, <-chan string, error) {
-	raddr, err := net.ResolveTCPAddr("tcp", addr)
-	if err != nil {
-		return nil, nil, fmt.Errorf("master (%s): error resolving server address (%s): %v", raddr, addr, err)
+	if onReconnect == nil {
+		onReconnect = func() {}
 	}
 
-	inc := make(chan string)
 	authInc, authOut := make(chan string), make(chan string)
 
 	c := &VanillaClient{
-		raddr:      raddr,
 		listenPort: listenPort,
 		bans:       bans,
-
-		inc: inc,
 
 		RemoteProvider: auth.NewRemoteProvider(authInc, authOut, authRole),
 		authInc:        authInc,
@@ -57,66 +48,57 @@ func NewVanilla(addr string, listenPort int, bans *bans.BanManager, authRole rol
 		onReconnect: onReconnect,
 	}
 
-	err = c.connect()
+	raddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("master (%s): error resolving server address (%s): %v", addr, addr, err)
 	}
+
+	onConnect := func() {
+		go func() {
+			for msg := range c.authOut {
+				c.conn.Send(msg)
+			}
+		}()
+
+		c.Register()
+	}
+
+	onDisconnect := func(err error) {
+		c.Log("disconnected: %v", err)
+		if !c.pingFailed {
+			c.reconnect(err)
+		}
+	}
+
+	var inc <-chan string
+	c.conn, inc = newConn(raddr, onConnect, onDisconnect)
 
 	return c, inc, nil
 }
 
-func (c *VanillaClient) connect() error {
-	conn, err := net.DialTCP("tcp", nil, c.raddr)
+func (c *VanillaClient) Start() {
+	err := c.conn.connect()
 	if err != nil {
-		return fmt.Errorf("master (%s): error connecting to master server: %v", c.raddr, err)
+		c.Log("error connecting to %s: %v", c.conn.addr, err)
+		c.reconnect(err)
 	}
-
-	c.conn = conn
-
-	sc := bufio.NewScanner(c.conn)
-
-	go func() {
-		for sc.Scan() {
-			c.inc <- sc.Text()
-		}
-		if err := sc.Err(); err != nil {
-			log.Println(err)
-		} else {
-			c.Log("EOF while scanning input")
-			if !c.pingFailed {
-				c.reconnect(io.EOF)
-			}
-		}
-	}()
-
-	go func() {
-		for msg := range c.authOut {
-			err := c.Send(msg)
-			if err != nil {
-				c.Log("remote auth: %v", err)
-			}
-		}
-	}()
-
-	c.Register()
-
-	return nil
 }
 
 func (c *VanillaClient) reconnect(err error) {
-	c.conn = nil
-
 	try, maxTries := 1, 10
 	for err != nil && try <= maxTries {
 		time.Sleep(time.Duration(try) * 30 * time.Second)
 		c.Log("trying to reconnect (attempt %d)", try)
 
-		err = c.connect()
+		err = c.conn.connect()
+		if err != nil {
+			c.Log("failed to reconnect (attempt %d)", try)
+		}
+
 		try++
 	}
 
 	if err == nil {
-		c.Log("reconnected successfully")
 		c.onReconnect()
 	} else {
 		c.Log("could not reconnect: %v", err)
@@ -124,7 +106,11 @@ func (c *VanillaClient) reconnect(err error) {
 }
 
 func (c *VanillaClient) Log(format string, args ...interface{}) {
-	log.Println(fmt.Sprintf("master (%s):", c.raddr), fmt.Sprintf(format, args...))
+	log.Println(fmt.Sprintf("master (%s):", c.conn.addr), fmt.Sprintf(format, args...))
+}
+
+func (c *VanillaClient) Send(format string, args ...interface{}) {
+	c.conn.Send(fmt.Sprintf(format, args...))
 }
 
 func (c *VanillaClient) Register() {
@@ -132,28 +118,7 @@ func (c *VanillaClient) Register() {
 		return
 	}
 	c.Log("registering")
-	err := c.Send("%s %d", protocol.RegServ, c.listenPort)
-	if err != nil {
-		c.Log("registration failed: %v", err)
-		return
-	}
-}
-
-func (c *VanillaClient) Send(format string, args ...interface{}) error {
-	if c.conn == nil {
-		return fmt.Errorf("master (%s): not connected", c.raddr)
-	}
-
-	err := c.conn.SetWriteDeadline(time.Now().Add(10 * time.Millisecond))
-	if err != nil {
-		c.Log("write failed: %v", err)
-		return err
-	}
-	_, err = c.conn.Write([]byte(fmt.Sprintf(format+"\n", args...)))
-	if err != nil {
-		c.Log("write failed: %v", err)
-	}
-	return err
+	c.Send("%s %d", protocol.RegServ, c.listenPort)
 }
 
 func (c *VanillaClient) Handle(msg string) {
@@ -195,5 +160,5 @@ func (c *VanillaClient) handleAddGlobalBan(args string) {
 
 	network := ips.GetSubnet(ip)
 
-	c.bans.AddBan(network, fmt.Sprintf("banned by master server (%s)", c.raddr), time.Time{}, true)
+	c.bans.AddBan(network, fmt.Sprintf("banned by master server (%s)", c.conn.addr), time.Time{}, true)
 }

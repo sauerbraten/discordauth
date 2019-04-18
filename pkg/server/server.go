@@ -3,9 +3,9 @@ package server
 import (
 	"log"
 	"net"
-	"time"
 
 	"github.com/sauerbraten/maitred/internal/db"
+	"github.com/sauerbraten/maitred/pkg/protocol"
 )
 
 type Server struct {
@@ -29,16 +29,15 @@ func (s *Server) Listen() {
 	}
 
 	for {
-		conn, err := listener.AcceptTCP()
+		tcpConn, err := listener.AcceptTCP()
 		if err != nil {
 			log.Printf("error accepting connection: %v", err)
 		}
 
-		conn.SetKeepAlive(true)
-		conn.SetKeepAlivePeriod(2 * time.Minute)
+		conn := protocol.NewConn(nil)
+		conn.Start(tcpConn)
 
-		h := newHandler(newConn(conn), s.db, s.stop)
-
-		h.run()
+		h := newHandler(conn, s.db, s.stop)
+		go h.run()
 	}
 }
