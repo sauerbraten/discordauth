@@ -19,13 +19,8 @@ func GenerateChallenge(pub PublicKey) (challenge, solution string, err error) {
 	return
 }
 
-func Solve(challenge string, privkey string) (string, error) {
+func Solve(challenge string, priv PrivateKey) (string, error) {
 	x, y, err := parsePoint(challenge)
-	if err != nil {
-		return "", err
-	}
-
-	priv, err := ParsePrivateKey(privkey)
 	if err != nil {
 		return "", err
 	}

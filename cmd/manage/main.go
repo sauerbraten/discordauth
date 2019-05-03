@@ -15,7 +15,7 @@ import (
 
 var (
 	adminName string
-	privkey   string
+	privkey   auth.PrivateKey
 	address   string
 )
 
@@ -26,9 +26,16 @@ func init() {
 		os.Exit(-1)
 	}
 
-	privkey = os.Getenv("MAITRED_AUTHKEY")
-	if privkey == "" {
+	_privkey, ok := os.LookupEnv("MAITRED_AUTHKEY")
+	if !ok {
 		fmt.Fprintln(os.Stderr, "MAITRED_AUTHKEY environment variable not set")
+		os.Exit(-1)
+	}
+
+	var err error
+	privkey, err = auth.ParsePrivateKey(_privkey)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(-1)
 	}
 

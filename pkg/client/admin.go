@@ -11,17 +11,24 @@ import (
 
 type AdminClient struct {
 	Client
+	privKey           auth.PrivateKey
 	isAdminConnection bool
 	ids               *protocol.IDCycle
 	callbacks         map[uint32]func(string)
 }
 
-func NewAdmin(client Client) *AdminClient {
+func NewAdmin(client Client) (*AdminClient, error) {
+	privKey, err := auth.ParsePrivateKey(os.Getenv("STATSAUTH_ADMIN_KEY"))
+	if err != nil {
+		return nil, err
+	}
+
 	return &AdminClient{
 		Client:    client,
+		privKey:   privKey,
 		ids:       new(protocol.IDCycle),
 		callbacks: map[uint32]func(string){},
-	}
+	}, nil
 }
 
 func (c *AdminClient) AddAuth(name, pubkey string, callback func(string)) {
@@ -76,7 +83,7 @@ func (c *AdminClient) handleChalAdmin(args string) {
 		return
 	}
 
-	answer, err := auth.Solve(challenge, os.Getenv("STATSAUTH_ADMIN_KEY"))
+	answer, err := auth.Solve(challenge, c.privKey)
 	if err != nil {
 		c.Log("could not solve admin challenge: %v", err)
 		return

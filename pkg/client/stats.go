@@ -54,8 +54,10 @@ func (c *StatsClient) handleFailStats(args string) {
 		log.Printf("malformed %s message from stats server: '%s': %v", protocol.FailStats, args, err)
 		return
 	}
+
 	reason := args[len(args)-r.Len():] // unread portion of args
 	reason = strings.TrimSpace(reason)
+
 	c.onFailure(reqID, reason)
 }
 
