@@ -7,7 +7,7 @@ import (
 
 	"github.com/sauerbraten/waiter/pkg/protocol/role"
 
-	"github.com/sauerbraten/maitred/pkg/protocol"
+	"github.com/sauerbraten/maitred/v2/pkg/protocol"
 )
 
 type StatsClient struct {

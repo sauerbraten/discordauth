@@ -3,7 +3,7 @@ package auth
 import (
 	"errors"
 
-	"github.com/sauerbraten/maitred/pkg/protocol"
+	"github.com/sauerbraten/maitred/v2/pkg/protocol"
 	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 

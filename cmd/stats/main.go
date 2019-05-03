@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 
-	"github.com/sauerbraten/maitred/pkg/auth"
+	"github.com/sauerbraten/maitred/v2/pkg/auth"
 )
 
 const gitRevision = "<filled in by CI service>"

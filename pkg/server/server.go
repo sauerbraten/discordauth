@@ -4,8 +4,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/sauerbraten/maitred/internal/db"
-	"github.com/sauerbraten/maitred/pkg/protocol"
+	"github.com/sauerbraten/maitred/v2/internal/db"
+	"github.com/sauerbraten/maitred/v2/pkg/protocol"
 )
 
 type Server struct {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/sauerbraten/jsonfile"
 
-	"github.com/sauerbraten/maitred/internal/db"
+	"github.com/sauerbraten/maitred/v2/internal/db"
 )
 
 type config struct {

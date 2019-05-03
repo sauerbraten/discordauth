@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/sauerbraten/maitred/internal/db"
-	"github.com/sauerbraten/maitred/pkg/server"
+	"github.com/sauerbraten/maitred/v2/internal/db"
+	"github.com/sauerbraten/maitred/v2/pkg/server"
 )
 
 func main() {

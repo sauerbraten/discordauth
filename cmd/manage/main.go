@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sauerbraten/maitred/pkg/protocol"
+	"github.com/sauerbraten/maitred/v2/pkg/protocol"
 
-	"github.com/sauerbraten/maitred/pkg/auth"
+	"github.com/sauerbraten/maitred/v2/pkg/auth"
 )
 
 var (

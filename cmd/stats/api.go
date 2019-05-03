@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/sauerbraten/waiter/pkg/protocol/gamemode"
 
-	"github.com/sauerbraten/maitred/internal/db"
+	"github.com/sauerbraten/maitred/v2/internal/db"
 )
 
 type API struct {

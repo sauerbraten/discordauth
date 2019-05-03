@@ -9,9 +9,9 @@ import (
 
 	"github.com/sauerbraten/extinfo"
 
-	"github.com/sauerbraten/maitred/internal/db"
-	"github.com/sauerbraten/maitred/pkg/auth"
-	"github.com/sauerbraten/maitred/pkg/protocol"
+	"github.com/sauerbraten/maitred/v2/internal/db"
+	"github.com/sauerbraten/maitred/v2/pkg/auth"
+	"github.com/sauerbraten/maitred/v2/pkg/protocol"
 )
 
 // request holds the data we need to remember between

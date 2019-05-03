@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/sauerbraten/maitred/pkg/auth"
+	"github.com/sauerbraten/maitred/v2/pkg/auth"
 )
 
 type User struct {
