@@ -22,6 +22,6 @@ tasks:
   - deploy_api: |
       cd maitred
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/stats'
-      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq stats api_config.json public ci@$DEPLOY:~/stats/
+      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq stats migrations public api_config.json ci@$DEPLOY:~/stats/
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall stats || true'
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd stats; nohup ./stats >> log.api.txt 2>&1 &'
