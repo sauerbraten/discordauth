@@ -1,12 +1,15 @@
-image: alpine/edge
+image: alpine/latest
 packages:
+  - git
   - go
+  - make
   - rsync
   - sqlite
 sources:
   - https://github.com/sauerbraten/maitred.git
 environment:
   DEPLOY: p1x.pw
+  GOFLAGS: '-mod=vendor'
 secrets:
   - 41a695fb-4229-450d-9aa4-5499f6bcea81 # ci@p1x.pw ssh key
 tasks:
