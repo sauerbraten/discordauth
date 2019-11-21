@@ -98,6 +98,12 @@ func (h *handler) run() {
 }
 
 func (h *handler) handle(msg string) {
+	if msg == "" {
+		log.Printf("unregistered server %s sent empty message", h.RemoteAddr())
+		h.Close()
+		return
+	}
+
 	cmd := strings.Split(msg, " ")[0]
 	args := msg[len(cmd)+1:]
 
