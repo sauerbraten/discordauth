@@ -30,7 +30,7 @@ type VanillaClient struct {
 }
 
 // New connects to the specified master server. Bans received from the master server are added to the given ban manager.
-func NewVanilla(addr string, listenPort int, bans *bans.BanManager, authRole role.ID, onReconnect func()) (*VanillaClient, error) {
+func NewVanilla(addr string, listenPort int, bans *bans.BanManager, authRole role.ID, onReconnect func()) *VanillaClient {
 	if onReconnect == nil {
 		onReconnect = func() {}
 	}
@@ -46,11 +46,6 @@ func NewVanilla(addr string, listenPort int, bans *bans.BanManager, authRole rol
 		authOut:        authOut,
 
 		onReconnect: onReconnect,
-	}
-
-	raddr, err := net.ResolveTCPAddr("tcp", addr)
-	if err != nil {
-		return nil, fmt.Errorf("master (%s): error resolving server address (%s): %v", addr, addr, err)
 	}
 
 	onConnect := func() {
@@ -70,16 +65,20 @@ func NewVanilla(addr string, listenPort int, bans *bans.BanManager, authRole rol
 		}
 	}
 
-	c.conn = newConn(raddr, onConnect, onDisconnect)
+	c.conn = newConn(addr, onConnect, onDisconnect)
 
-	return c, nil
+	return c
 }
 
 func (c *VanillaClient) Start() {
 	err := c.conn.connect()
 	if err != nil {
-		c.Log("error connecting to %s: %v", c.conn.addr, err)
-		c.reconnect(err)
+		c.Log("error connecting to %s: %v", c.addr, err)
+		if netErr, ok := err.(*net.OpError); ok && !netErr.Temporary() {
+			c.Log("not a temporary error, not retrying")
+		} else {
+			c.reconnect(err)
+		}
 	}
 }
 

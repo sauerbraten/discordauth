@@ -16,17 +16,14 @@ type StatsClient struct {
 	onFailure func(reqID uint32, reason string)
 }
 
-func NewStats(addr string, listenPort int, onSuccess func(uint32), onFailure func(uint32, string), onReconnect func()) (*StatsClient, error) {
-	vc, err := NewVanilla(addr, listenPort, nil, role.None, onReconnect)
-	if err != nil {
-		return nil, err
-	}
+func NewStats(addr string, listenPort int, onSuccess func(uint32), onFailure func(uint32, string), onReconnect func()) *StatsClient {
+	vc := NewVanilla(addr, listenPort, nil, role.None, onReconnect)
 
 	return &StatsClient{
 		VanillaClient: vc,
 		onSuccess:     onSuccess,
 		onFailure:     onFailure,
-	}, nil
+	}
 }
 
 func (c *StatsClient) Handle(msg string) {
