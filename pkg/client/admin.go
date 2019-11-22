@@ -18,7 +18,15 @@ type AdminClient struct {
 }
 
 func NewAdmin(client Client) (*AdminClient, error) {
-	privKey, err := auth.ParsePrivateKey(os.Getenv("STATSAUTH_ADMIN_KEY"))
+	var (
+		adminKey string
+		ok       bool
+	)
+	if adminKey, ok = os.LookupEnv("STATSAUTH_ADMIN_KEY"); !ok {
+		return nil, fmt.Errorf("STATSAUTH_ADMIN_KEY environment variable missing")
+	}
+
+	privKey, err := auth.ParsePrivateKey(adminKey)
 	if err != nil {
 		return nil, err
 	}
