@@ -107,17 +107,26 @@ func (h *handler) handle(msg string) {
 	cmd := strings.Split(msg, " ")[0]
 	args := msg[len(cmd)+1:]
 
-	// unregistered servers have to register themselves before doing anything else
-	if h.client.id < 0 && cmd != protocol.RegServ {
-		log.Printf("unregistered server %s sent disallowed command '%s' (args: '%s')", h.RemoteAddr(), cmd, args)
-		h.Close()
-		return
-	}
-
 	switch cmd {
 	case protocol.RegServ:
 		h.handleRegServ(args)
 
+	case protocol.ReqAdmin:
+		h.handleReqAdmin(args)
+
+	case protocol.ConfAdmin:
+		h.handleConfAdmin(args)
+
+	default:
+		// unknown clients have to register themselves before doing anything else
+		if h.client.id < 0 && !h.isAdmin {
+			log.Printf("unknown client %s sent disallowed command '%s' (args: '%s')", h.RemoteAddr(), cmd, args)
+			h.Close()
+			return
+		}
+	}
+
+	switch cmd {
 	case protocol.ReqAuth:
 		h.handleReqAuth(args)
 
@@ -129,12 +138,6 @@ func (h *handler) handle(msg string) {
 
 	case protocol.Lookup:
 		h.handleLookup(args)
-
-	case protocol.ReqAdmin:
-		h.handleReqAdmin(args)
-
-	case protocol.ConfAdmin:
-		h.handleConfAdmin(args)
 
 	case protocol.AddAuth:
 		if h.isAdmin {
