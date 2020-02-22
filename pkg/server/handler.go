@@ -338,7 +338,7 @@ func (h *handler) handleReqAdmin(args string) {
 	var adminName string
 	_, err := fmt.Sscanf(args, "%d %s", &reqID, &adminName)
 	if err != nil {
-		log.Printf("malformed %s message from game server: '%s': %v", protocol.ReqAdmin, args, err)
+		log.Printf("malformed %s message from client: '%s': %v", protocol.ReqAdmin, args, err)
 		h.Send("%s %d %s", protocol.FailAdmin, reqID, err.Error())
 		h.Close()
 		return

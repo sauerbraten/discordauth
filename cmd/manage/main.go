@@ -16,6 +16,7 @@ var (
 	adminName string
 	privkey   auth.PrivateKey
 	address   string
+	ids       = new(protocol.IDCycle)
 )
 
 func init() {
@@ -126,7 +127,7 @@ func send(conn *net.TCPConn, format string, args ...interface{}) error {
 
 func authenticate(conn *net.TCPConn, scanner *bufio.Scanner) {
 	conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
-	err := send(conn, "%s %s", protocol.ReqAdmin, adminName)
+	err := send(conn, "%s %d %s", protocol.ReqAdmin, ids.Next(), adminName)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(3)
