@@ -1,22 +1,20 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"net"
 	"os"
-	"strings"
-	"time"
 
 	"github.com/sauerbraten/maitred/v2/pkg/auth"
+	"github.com/sauerbraten/maitred/v2/pkg/client"
 	"github.com/sauerbraten/maitred/v2/pkg/protocol"
 )
 
 var (
-	adminName string
-	privkey   auth.PrivateKey
-	address   string
-	ids       = new(protocol.IDCycle)
+	adminName   string
+	privkey     auth.PrivateKey
+	address     string
+	ids         = new(protocol.IDCycle)
+	adminClient *client.AdminClient
 )
 
 func init() {
@@ -53,120 +51,60 @@ func usage() {
 }
 
 func main() {
+	var onUpgraded func()
+
 	switch len(os.Args) {
 	case 3:
 		if os.Args[1] != protocol.DelAuth {
 			usage()
 		}
-		deleteUser(os.Args[2])
+		onUpgraded = func() { deleteUser(os.Args[2]) }
 	case 4:
 		if os.Args[1] != protocol.AddAuth {
 			usage()
 		}
-		addUser(os.Args[2], os.Args[3])
+		onUpgraded = func() { addUser(os.Args[2], os.Args[3]) }
 	default:
 		usage()
+	}
+
+	vc, _, _ := client.NewVanilla(
+		address,
+		nil, // ignore bans
+		nil, // we don't need the 'connected' hook
+		nil, // we don't expect reconnects
+	)
+
+	adminClient = client.NewAdmin(vc, adminName, privkey)
+	adminClient.Start()
+	adminClient.Upgrade(
+		onUpgraded,
+		func() {
+			os.Exit(5)
+		},
+	)
+
+	for msg := range adminClient.Incoming() {
+		adminClient.Handle(msg)
 	}
 }
 
 func addUser(name, pubkey string) {
-	resp := exec(protocol.AddAuth, name, pubkey)
-	if resp != protocol.SuccAddAuth {
-		fmt.Fprintln(os.Stderr, "error running", protocol.AddAuth, "command:", resp)
-		os.Exit(5)
-	}
+	adminClient.AddAuth(name, pubkey, func(reason string) {
+		if reason != "" {
+			fmt.Fprintln(os.Stderr, "couldn't add user:", reason)
+			os.Exit(5)
+		}
+		os.Exit(0)
+	})
 }
 
 func deleteUser(name string) {
-	resp := exec(protocol.DelAuth, name)
-	if resp != protocol.SuccDelAuth {
-		fmt.Fprintln(os.Stderr, "error running", protocol.DelAuth, "command:", resp)
-		os.Exit(5)
-	}
-}
-
-func exec(cmd string, args ...string) string {
-	conn := connect()
-	scanner := bufio.NewScanner(conn)
-
-	authenticate(conn, scanner)
-
-	err := send(conn, "%s %s", cmd, strings.Join(args, " "))
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(4)
-	}
-
-	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
-	if !scanner.Scan() {
-		fmt.Fprintln(os.Stderr, scanner.Err())
-		os.Exit(4)
-	}
-
-	return scanner.Text()
-}
-
-func connect() *net.TCPConn {
-	raddr, err := net.ResolveTCPAddr("tcp", address)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2)
-	}
-	conn, err := net.DialTCP("tcp", nil, raddr)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2)
-	}
-	return conn
-}
-
-func send(conn *net.TCPConn, format string, args ...interface{}) error {
-	_, err := conn.Write([]byte(fmt.Sprintf(format+"\n", args...)))
-	return err
-}
-
-func authenticate(conn *net.TCPConn, scanner *bufio.Scanner) {
-	conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
-	err := send(conn, "%s %d %s", protocol.ReqAdmin, ids.Next(), adminName)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(3)
-	}
-
-	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
-	if !scanner.Scan() {
-		fmt.Fprintln(os.Stderr, scanner.Err())
-		os.Exit(3)
-	}
-	var challenge string
-	_, err = fmt.Sscanf(scanner.Text(), protocol.ChalAdmin+" %s", &challenge)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(3)
-	}
-
-	solution, err := auth.Solve(challenge, privkey)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(3)
-	}
-
-	conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
-	err = send(conn, "%s %s", protocol.ConfAdmin, solution)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(3)
-	}
-
-	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
-	if !scanner.Scan() {
-		fmt.Fprintln(os.Stderr, scanner.Err())
-		os.Exit(3)
-	}
-	response := scanner.Text()
-
-	if response != protocol.SuccAdmin {
-		fmt.Fprintln(os.Stderr, "could not authenticate as admin:", response)
-		os.Exit(3)
-	}
+	adminClient.DelAuth(name, func(reason string) {
+		if reason != "" {
+			fmt.Fprintln(os.Stderr, "couldn't delete user:", reason)
+			os.Exit(5)
+		}
+		os.Exit(0)
+	})
 }

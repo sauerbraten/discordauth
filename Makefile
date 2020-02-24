@@ -1,4 +1,4 @@
-.PHONY: all maitred manage stats clean rebuild_db
+.PHONY: all maitred manage stats clean nuke_db
 
 all: maitred manage stats
 
@@ -17,6 +17,5 @@ stats:
 clean:
 	rm -f ./maitred ./manage ./stats
 
-rebuild_db:
+nuke_db:
 	if [ -f maitred.sqlite ]; then rm maitred.sqlite; fi
-	for m in migrations/*.up.sql; do sqlite3 maitred.sqlite < "$$m"; done

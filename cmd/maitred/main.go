@@ -25,10 +25,10 @@ func main() {
 
 	s := server.New(addr, db, stop)
 
-	go s.Listen()
-
 	interrupt := make(chan os.Signal)
 	signal.Notify(interrupt, os.Interrupt)
+
+	go s.Listen()
 
 	<-interrupt
 	close(stop)
