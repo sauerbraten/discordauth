@@ -5,8 +5,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/sauerbraten/waiter/pkg/protocol/role"
-
 	"github.com/sauerbraten/maitred/v2/pkg/protocol"
 )
 
@@ -16,11 +14,9 @@ type StatsClient struct {
 	onFailure func(reqID uint32, reason string)
 }
 
-func NewStats(addr string, listenPort int, onSuccess func(uint32), onFailure func(uint32, string), onReconnect func()) *StatsClient {
-	vc := NewVanilla(addr, listenPort, nil, role.None, onReconnect)
-
+func NewStats(c *VanillaClient, onSuccess func(uint32), onFailure func(uint32, string)) *StatsClient {
 	return &StatsClient{
-		VanillaClient: vc,
+		VanillaClient: c,
 		onSuccess:     onSuccess,
 		onFailure:     onFailure,
 	}
@@ -65,5 +61,6 @@ func (c *StatsClient) handleSuccStats(args string) {
 		log.Printf("malformed %s message from stats server: '%s': %v", protocol.SuccStats, args, err)
 		return
 	}
+
 	c.onSuccess(reqID)
 }
