@@ -110,12 +110,15 @@ func (h *handler) handle(msg string) {
 	switch cmd {
 	case protocol.RegServ:
 		h.handleRegServ(args)
+		return
 
 	case protocol.ReqAdmin:
 		h.handleReqAdmin(args)
+		return
 
 	case protocol.ConfAdmin:
 		h.handleConfAdmin(args)
+		return
 
 	default:
 		// unknown clients have to register themselves before doing anything else
@@ -431,21 +434,35 @@ func (h *handler) handleAddAuth(args string) {
 }
 
 func (h *handler) handleDelAuth(args string) {
-	var name string
-	_, err := fmt.Sscanf(args, "%s", &name)
+	var (
+		reqID uint32
+		name  string
+	)
+	_, err := fmt.Sscanf(args, "%d %s", &reqID, &name)
 	if err != nil {
 		log.Printf("malformed %s message from game server: '%s': %v", protocol.DelAuth, args, err)
 		h.Close()
 		return
 	}
 
-	err = h.db.DelUser(name)
+	exists, err := h.db.UserExists(name)
 	if err != nil {
 		log.Println(err)
-		h.Send("%s %v", protocol.FailDelAuth, err)
+		h.Send("%s %d %v", protocol.FailDelAuth, reqID, err)
+		return
+	}
+	if !exists {
+		h.Send("%s %d user doesn't exist", protocol.FailDelAuth, reqID)
 		return
 	}
 
-	h.Send(protocol.SuccDelAuth)
+	err = h.db.DelUser(name)
+	if err != nil {
+		log.Println(err)
+		h.Send("%s %d %v", protocol.FailDelAuth, reqID, err)
+		return
+	}
+
+	h.Send("%s %d", protocol.SuccDelAuth, reqID)
 	log.Printf("admin '%s' (%s) deleted auth entry '%s'", h.authedUsersByRequest[h.adminReqID], h.RemoteAddr(), name)
 }
