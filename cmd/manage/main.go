@@ -68,9 +68,8 @@ func main() {
 		usage()
 	}
 
-	vc, _, _ := client.NewVanilla(
+	vc, _, _, _ := client.NewVanilla(
 		address,
-		nil, // ignore bans
 		nil, // we don't need the 'connected' hook
 		nil, // we don't expect reconnects
 	)
