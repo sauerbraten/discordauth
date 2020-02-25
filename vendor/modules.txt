@@ -12,15 +12,12 @@ github.com/jmoiron/sqlx
 github.com/jmoiron/sqlx/reflectx
 # github.com/mattn/go-sqlite3 v1.10.0
 github.com/mattn/go-sqlite3
-# github.com/sauerbraten/chef v0.0.0-20190222152458-6e380f288de7
-github.com/sauerbraten/chef/pkg/ips
-# github.com/sauerbraten/cubecode v0.0.0-20170529180859-6be16020d14c
+# github.com/sauerbraten/cubecode v0.0.0-20191118162217-05ee938b0ef7
 github.com/sauerbraten/cubecode
 # github.com/sauerbraten/extinfo v0.0.0-20190220141329-a4ae380e7098
 github.com/sauerbraten/extinfo
 # github.com/sauerbraten/jsonfile v0.0.0-20150527142926-f0505a8c13c6
 github.com/sauerbraten/jsonfile
 # github.com/sauerbraten/waiter v0.0.0-20190404224729-ddb62a3cdaab
-github.com/sauerbraten/waiter/pkg/bans
 github.com/sauerbraten/waiter/pkg/protocol/gamemode
 github.com/sauerbraten/waiter/pkg/protocol/role
