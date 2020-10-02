@@ -8,10 +8,10 @@ packages:
 sources:
   - https://github.com/sauerbraten/maitred.git
 environment:
-  DEPLOY: ng.p1x.pw
+  DEPLOY: p1x.pw
   GOFLAGS: "-mod=vendor"
 secrets:
-  - 956ddc04-c911-4147-bc90-30bb08276c3e # ci@ng.p1x.pw ssh key
+  - 956ddc04-c911-4147-bc90-30bb08276c3e # ci@p1x.pw ssh key
 tasks:
   - build: |
       cd maitred
@@ -20,11 +20,9 @@ tasks:
       cd maitred
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/maitred'
       rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq maitred migrations ci@$DEPLOY:~/maitred/
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall maitred || true'
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd maitred; nohup ./maitred >> log.txt 2>&1 &'
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'sudo systemctl restart maitred'
   - deploy_api: |
       cd maitred
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/maitred'
       rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq stats public api_config.json ci@$DEPLOY:~/maitred/
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'killall stats || true'
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd maitred; nohup ./stats >> log.api.txt 2>&1 &'
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'sudo systemctl restart stats'
