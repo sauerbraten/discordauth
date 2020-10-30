@@ -14,7 +14,7 @@ var (
 	privkey     auth.PrivateKey
 	address     string
 	ids         = new(protocol.IDCycle)
-	adminClient *client.AdminClient
+	adminClient *client.Admin
 )
 
 func init() {
@@ -51,32 +51,31 @@ func usage() {
 }
 
 func main() {
-	var onUpgraded func()
+	var onUpgraded func(*client.Admin)
 
 	switch len(os.Args) {
 	case 3:
 		if os.Args[1] != protocol.DelAuth {
 			usage()
 		}
-		onUpgraded = func() { deleteUser(os.Args[2]) }
+		onUpgraded = func(*client.Admin) { deleteUser(os.Args[2]) }
 	case 4:
 		if os.Args[1] != protocol.AddAuth {
 			usage()
 		}
-		onUpgraded = func() { addUser(os.Args[2], os.Args[3]) }
+		onUpgraded = func(*client.Admin) { addUser(os.Args[2], os.Args[3]) }
 	default:
 		usage()
 	}
 
-	vc, _, _, _ := client.NewVanilla(
+	vc, _, _, _ := client.New(
 		address,
 		nil, // we don't need the 'connected' hook
 		nil, // we don't expect reconnects
 	)
+	vc.Start()
 
-	adminClient = client.NewAdmin(vc, adminName, privkey)
-	adminClient.Start()
-	adminClient.Upgrade(
+	adminClient = client.NewAdmin(vc, adminName, privkey,
 		onUpgraded,
 		func() {
 			os.Exit(5)
