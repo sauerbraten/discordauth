@@ -8,8 +8,6 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-
-	"github.com/sauerbraten/maitred/v2/pkg/auth"
 )
 
 const gitRevision = "<filled in by CI service>"
@@ -26,33 +24,21 @@ func main() {
 
 	r.HandleFunc("/gen/{name}", func(resp http.ResponseWriter, req *http.Request) {
 		name := chi.URLParam(req, "name")
+		resp.Header().Set("Content-Type", "text/html")
+		resp.Write([]byte(fmt.Sprintf(`<doctype html>
+<html style="font-family: monospace; font-size: 11pt;">
+<head><title>%s | %s</title></head>
+<body>
+<h1>Create your account in 2 easy steps</h1>
 
-		priv, pub, err := auth.GenerateKeyPair()
-		if err != nil {
-			resp.Write([]byte(err.Error()))
-			return
-		}
+<p>Each step is just a command you can to copy and paste into Sauerbraten's game console:</p>
 
-		fmt.Fprintf(resp, "+++ THIS IS ALPHA ZONE! ACCOUNTS ARE LOST AT EACH SERVER RESTART! +++")
-		fmt.Fprintf(resp, "\n")
-		fmt.Fprintf(resp, "\n")
-		fmt.Fprintf(resp, "CREATE AN ACCOUNT IN 3 SIMPLE STEPS\n")
-		fmt.Fprintf(resp, "each step is just a command you have to execute in sauer\n")
-		fmt.Fprintf(resp, "\n")
-		fmt.Fprintf(resp, "1. copy and paste the following line and execute it in in the chat prompt:\n")
-		fmt.Fprintf(resp, "\n")
-		fmt.Fprintf(resp, "/authkey \"%s\" \"%s\" \"stats.p1x.pw\"; saveauthkeys; autoauth 1\n", name, priv.String())
-		fmt.Fprintf(resp, "\n")
-		fmt.Fprintf(resp, "2. then:\n")
-		fmt.Fprintf(resp, "\n")
-		fmt.Fprintf(resp, "/connect p1x.pw\n")
-		fmt.Fprintf(resp, "\n")
-		fmt.Fprintf(resp, "3. when you are connected, complete the registration:\n")
-		fmt.Fprintf(resp, "\n")
-		fmt.Fprintf(resp, "/servcmd register %s %s\n", name, pub.String())
-		fmt.Fprintf(resp, "\n")
-		fmt.Fprintf(resp, "\n")
-		fmt.Fprintf(resp, "+++ THIS IS ALPHA ZONE! ACCOUNTS ARE LOST AT EACH SERVER RESTART! +++")
+<ol>
+<li>/connect p1x.pw</li>
+<li>/authkey "%s" (genauthkey (rndstr 32)) "stats.p1x.pw"; saveauthkeys; autoauth 1; /servcmd register "%s" (getpubkey "stats.p1x.pw")</li>
+</ol>
+</body>
+</html>`, name, req.Host, name, name)))
 	})
 
 	r.Mount("/", http.FileServer(http.Dir("./public")))
