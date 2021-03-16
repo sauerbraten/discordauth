@@ -125,6 +125,12 @@ func (h *handler) handle(msg string) {
 		h.handleConfAdmin(args)
 		return
 
+	case protocol.ReqAuth:
+		h.handleReqAuth(args)
+
+	case protocol.ConfAuth:
+		h.handleConfAuth(args)
+
 	default:
 		// unknown clients have to register themselves before doing anything else
 		if h.client.id < 0 && !h.isAdmin {
@@ -135,12 +141,6 @@ func (h *handler) handle(msg string) {
 	}
 
 	switch cmd {
-	case protocol.ReqAuth:
-		h.handleReqAuth(args)
-
-	case protocol.ConfAuth:
-		h.handleConfAuth(args)
-
 	case protocol.Stats:
 		h.handleStats(args)
 
