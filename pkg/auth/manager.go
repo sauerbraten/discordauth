@@ -6,6 +6,11 @@ import (
 	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
+type Provider interface {
+	GenerateChallenge(name string, callback func(reqID uint32, chal string, err error))
+	ConfirmAnswer(reqID uint32, answ string, callback func(ok bool, err error))
+}
+
 type callbacks struct {
 	onSuccess func(role.ID)
 	onFailure func(error)
@@ -13,12 +18,14 @@ type callbacks struct {
 
 type Manager struct {
 	providersByDomain  map[string]Provider
+	rolesByDomain      map[string]role.ID
 	callbacksByRequest map[uint32]callbacks
 }
 
-func NewManager(providers map[string]Provider) *Manager {
+func NewManager(providers map[string]Provider, roles map[string]role.ID) *Manager {
 	return &Manager{
 		providersByDomain:  providers,
+		rolesByDomain:      roles,
 		callbacksByRequest: map[uint32]callbacks{},
 	}
 }
@@ -60,12 +67,12 @@ func (m *Manager) CheckAnswer(reqID uint32, domain string, answ string) (err err
 		return
 	}
 
-	p.ConfirmAnswer(reqID, answ, func(rol role.ID, err error) {
+	p.ConfirmAnswer(reqID, answ, func(ok bool, err error) {
 		if err != nil {
 			go callbacks.onFailure(err)
 			return
 		}
-		go callbacks.onSuccess(rol)
+		go callbacks.onSuccess(m.rolesByDomain[domain])
 	})
 
 	return
