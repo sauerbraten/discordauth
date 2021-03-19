@@ -60,6 +60,30 @@ func TestAuth(t *testing.T) {
 	}
 }
 
+func TestPrivateKey(t *testing.T) {
+	for i, pair := range keys {
+		priv, err := ParsePrivateKey(pair.priv)
+		if err != nil {
+			t.Errorf("parsing private part of key pair %d: %v", i+1, err)
+		}
+		if priv.String() != pair.priv {
+			t.Errorf("encoding of private key %d does not match (expected %v, got %v)", i+1, pair.priv, priv.String())
+		}
+	}
+}
+
+func TestPublicKey(t *testing.T) {
+	for i, pair := range keys {
+		pub, err := ParsePublicKey(pair.pub)
+		if err != nil {
+			t.Errorf("parsing public part of key pair %d: %v", i+1, err)
+		}
+		if pub.String() != pair.pub {
+			t.Errorf("encoding of public key %d does not match (expected %v, got %v)", i+1, pair.pub, pub.String())
+		}
+	}
+}
+
 func TestGenerateKeyPair(t *testing.T) {
 	priv, pub, err := GenerateKeyPair()
 	if err != nil {
