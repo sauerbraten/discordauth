@@ -22,7 +22,7 @@ type Database struct {
 func New(path string) (*Database, error) {
 	db, err := sqlx.Open("sqlite3", path)
 	if err != nil {
-		return nil, errors.New("db: could not open database: " + err.Error())
+		return nil, errors.New("db: opening database: " + err.Error())
 	}
 
 	db.Mapper = reflectx.NewMapperFunc("json", strings.ToLower) // use json struct tags
@@ -30,13 +30,19 @@ func New(path string) (*Database, error) {
 	_, err = db.Exec("pragma foreign_keys = on")
 	if err != nil {
 		db.Close()
-		return nil, errors.New("db: could not enable foreign keys: " + err.Error())
+		return nil, errors.New("db: enabling foreign keys: " + err.Error())
 	}
 
 	err = migrateUp(db.DB)
 	if err != nil {
 		db.Close()
 		return nil, err
+	}
+
+	_, err = db.Exec("pragma journal_mode = wal")
+	if err != nil {
+		db.Close()
+		return nil, errors.New("db: enabling WAL mode: " + err.Error())
 	}
 
 	return &Database{
@@ -49,22 +55,22 @@ func migrateUp(db *sql.DB) error {
 	srcFiles := &file.File{}
 	src, err := srcFiles.Open("file://migrations")
 	if err != nil {
-		return errors.New("db: could not open migration source files: " + err.Error())
+		return errors.New("db: opening migration source files: " + err.Error())
 	}
 	defer src.Close()
 
 	mDB, err := sqlite3.WithInstance(db, &sqlite3.Config{})
 	if err != nil {
-		return errors.New("db: could not use database for migrations: " + err.Error())
+		return errors.New("db: using database for migrations: " + err.Error())
 	}
 
-	m, err := migrate.NewWithInstance("./migrations/", src, "maitred.sqlite", mDB)
+	m, err := migrate.NewWithInstance("./migrations/", src, "users.sqlite", mDB)
 	if err != nil {
-		return errors.New("db: could not set up migrations: " + err.Error())
+		return errors.New("db: setting up migrations: " + err.Error())
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return errors.New("db: failed to migrate database: " + err.Error())
+		return errors.New("db: migrating database: " + err.Error())
 	}
 
 	return nil

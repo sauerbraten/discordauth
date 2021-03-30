@@ -16,33 +16,3 @@ const (
 	SuccAuth = "succauth"
 	FailAuth = "failauth"
 )
-
-// non-standard stats command
-const (
-	Stats     = "stats"
-	SuccStats = "succstats"
-	FailStats = "failstats"
-)
-
-// non-standard administration commands
-const (
-	ReqAdmin  = "reqadmin"
-	ChalAdmin = "chaladmin"
-	ConfAdmin = "confadmin"
-	SuccAdmin = "succadmin"
-	FailAdmin = "failadmin"
-
-	AddAuth     = "addauth"
-	SuccAddAuth = "succaddauth"
-	FailAddAuth = "failaddauth"
-	DelAuth     = "delauth"
-	SuccDelAuth = "succdelauth"
-	FailDelAuth = "faildelauth"
-)
-
-// other non-standard commands
-const (
-	Lookup     = "lookup" // could be used for name protection
-	SuccLookup = "succlookup"
-	FailLookup = "faillookup"
-)

@@ -3,56 +3,62 @@ package db
 import (
 	"database/sql"
 	"fmt"
-
-	"github.com/sauerbraten/maitred/v2/pkg/auth"
 )
 
 type User struct {
-	Name      string         `json:"name"`
-	PublicKey auth.PublicKey `json:"public_key"`
+	Name      string `json:"name"`
+	PublicKey string `json:"public_key"`
 }
 
-func (db *Database) UserExists(name string) (bool, error) {
+type UserExistsError User
+
+func (e UserExistsError) Error() string {
+	return fmt.Sprintf("db: user %s already exists (with public key: %s)", e.Name, e.PublicKey)
+}
+
+func (db *Database) AddUser(name string, pubkey string, override bool) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	var _name string
-	err := db.Get(&_name, "select `name` from `users` where `name` = ?", name)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
+	if !override {
+		err := db.Get(&pubkey, "select `pubkey` from `users` where `name` = ?", name)
+		if err == nil {
+			return UserExistsError(User{name, pubkey})
 		}
-		return false, fmt.Errorf("db: error looking up user name '%s' in database: %v", name, err)
 	}
-	return _name == name, nil
-}
 
-func (db *Database) AddUser(name, pubkey string) error {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+	insert := "insert"
+	if override {
+		insert = "insert or replace"
+	}
 
-	_, err := db.Exec("insert into `users` (`name`, `pubkey`) values (?, ?)", name, pubkey)
+	_, err := db.Exec(fmt.Sprintf("%s into `users` (`name`, `pubkey`) values (?, ?)", insert), name, pubkey)
 	if err != nil {
-		return fmt.Errorf("db: error inserting '%s' (%s) into database: %v", name, pubkey, err)
+		return fmt.Errorf("db: inserting ('%s', '%s') into database: %w", name, pubkey, err)
 	}
+
 	return nil
 }
 
-func (db *Database) GetPublicKey(name string) (pubkey auth.PublicKey, err error) {
+type UserNotFoundError string
+
+func (e UserNotFoundError) Error() string {
+	return fmt.Sprintf("db: no user named %s", string(e))
+}
+
+func (db *Database) GetPublicKey(name string) (pubkey string, err error) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	var _pubkey string
-	err = db.Get(&_pubkey, "select `pubkey` from `users` where `name` = ?", name)
+	err = db.Get(&pubkey, "select `pubkey` from `users` where `name` = ?", name)
 	if err != nil {
-		err = fmt.Errorf("db: error retrieving public key of '%s': %v", name, err)
+		if err == sql.ErrNoRows {
+			return "", UserNotFoundError(name)
+		}
+		err = fmt.Errorf("db: retrieving public key of '%s': %v", name, err)
 		return
 	}
 
-	pubkey, err = auth.ParsePublicKey(_pubkey)
-	if err != nil {
-		err = fmt.Errorf("db: error parsing public key '%s': %v", _pubkey, err)
-	}
 	return
 }
 
@@ -62,7 +68,7 @@ func (db *Database) UpdateUserLastAuthed(name string) error {
 
 	_, err := db.Exec("update `users` set `last_authed_at` = strftime('%s', 'now') where `name` = ?", name)
 	if err != nil {
-		return fmt.Errorf("db: error updating 'last_authed_at' field of user '%s': %v", name, err)
+		return fmt.Errorf("db: updating 'last_authed_at' field of user '%s': %v", name, err)
 	}
 	return nil
 }
@@ -73,7 +79,7 @@ func (db *Database) DelUser(name string) error {
 
 	_, err := db.Exec("delete from `users` where `name` = ?", name)
 	if err != nil {
-		return fmt.Errorf("db: error deleting '%s': %v", name, err)
+		return fmt.Errorf("db: deleting '%s': %v", name, err)
 	}
 	return nil
 }

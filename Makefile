@@ -1,21 +1,14 @@
-.PHONY: all maitred manage stats clean nuke_db
+.PHONY: all discordauth clean nuke_db
 
-all: maitred manage stats
+all: discordauth
 
-maitred:
-	go build ./cmd/maitred
-
-manage:
-	go build ./cmd/manage
-
-stats:
-	go build ./cmd/stats
-
+discordauth:
+	go build ./cmd/discordauth
 
 # utility targets
 
 clean:
-	rm -f ./maitred ./manage ./stats
+	rm -f ./discordauth
 
 nuke_db:
-	if [ -f maitred.sqlite ]; then rm maitred.sqlite; fi
+	if [ -f discordauth.sqlite ]; then rm discordauth.sqlite; fi

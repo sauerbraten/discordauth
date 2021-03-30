@@ -16,13 +16,8 @@ tasks:
   - build: |
       cd maitred
       make all
-  - deploy_master: |
+  - deploy_discordauth: |
       cd maitred
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/maitred'
-      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq maitred migrations ci@$DEPLOY:~/maitred/
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'sudo systemctl restart maitred'
-  - deploy_api: |
-      cd maitred
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/maitred'
-      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq stats public api_config.json ci@$DEPLOY:~/maitred/
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'sudo systemctl restart stats'
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/discordauth'
+      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq discordauth migrations ci@$DEPLOY:~/discordauth/
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'sudo systemctl restart discordauth'

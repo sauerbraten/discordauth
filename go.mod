@@ -3,6 +3,7 @@ module github.com/sauerbraten/maitred/v2
 go 1.12
 
 require (
+	github.com/bwmarrin/discordgo v0.23.2
 	github.com/go-chi/chi v4.0.2+incompatible
 	github.com/golang-migrate/migrate/v4 v4.2.5
 	github.com/jmoiron/sqlx v1.2.0

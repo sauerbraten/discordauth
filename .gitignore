@@ -1,7 +1,3 @@
-manage
-!cmd/manage/
-maitred
-!cmd/maitred/
-stats
-!cmd/stats/
-maitred.sqlite
+discordauth
+discordauth.sqlite
+!cmd/discordauth/
