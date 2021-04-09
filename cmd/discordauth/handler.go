@@ -102,7 +102,7 @@ func (h *handler) handle(msg string) {
 		h.handleConfAuth(args)
 
 	default:
-		log.Printf("unknown command %s in '%s'", cmd, msg)
+		log.Printf("unknown command %s in '%s' from %s", cmd, msg, h.RemoteAddr())
 		h.Close()
 		return
 	}
