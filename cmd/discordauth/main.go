@@ -58,7 +58,7 @@ func newServer(listenAddr *net.TCPAddr, db *db.Database, stop <-chan struct{}) *
 		stop:       stop,
 	}
 
-	stopDiscord := setupDiscord(s.addUser)
+	stopDiscord := startDiscord(s)
 
 	go func() {
 		<-stop
@@ -95,6 +95,22 @@ func (s *Server) addUser(name, pubkey string, override bool) error {
 		return fmt.Errorf("parsing public key: %w", err)
 	}
 	return s.db.AddUser(name, pubkey, override)
+}
+
+func (s *Server) delUser(name string) error {
+	return s.db.DelUser(name)
+}
+
+func (s *Server) banUser(name string) error {
+	return s.db.AddBan(name)
+}
+
+func (s *Server) isBanned(name string) (bool, error) {
+	return s.db.IsBanned(name)
+}
+
+func (s *Server) UnbanUser(name string) error {
+	return s.db.DelBan(name)
 }
 
 func (s *Server) getPublicKey(name string) (*auth.PublicKey, bool) {

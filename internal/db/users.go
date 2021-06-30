@@ -34,7 +34,7 @@ func (db *Database) AddUser(name string, pubkey string, override bool) error {
 
 	_, err := db.Exec(fmt.Sprintf("%s into `users` (`name`, `pubkey`) values (?, ?)", insert), name, pubkey)
 	if err != nil {
-		return fmt.Errorf("db: inserting ('%s', '%s') into database: %w", name, pubkey, err)
+		return fmt.Errorf("db: inserting ('%s', '%s') into users table: %w", name, pubkey, err)
 	}
 
 	return nil
@@ -79,7 +79,7 @@ func (db *Database) DelUser(name string) error {
 
 	_, err := db.Exec("delete from `users` where `name` = ?", name)
 	if err != nil {
-		return fmt.Errorf("db: deleting '%s': %v", name, err)
+		return fmt.Errorf("db: deleting '%s' from users table: %v", name, err)
 	}
 	return nil
 }

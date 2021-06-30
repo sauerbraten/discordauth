@@ -20,5 +20,5 @@ tasks:
   - deploy_discordauth: |
       cd maitred
       ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'mkdir -p ~/discordauth'
-      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq discordauth migrations ~/.discordauth_discord_token ci@$DEPLOY:~/discordauth/
-      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd discordauth; echo DISCORD_TOKEN=$(cat .discordauth_discord_token) > .env; sudo systemctl restart discordauth'
+      rsync --rsh="ssh -o StrictHostKeyChecking=no" -rPq discordauth migrations .env ~/.discordauth_discord_token ci@$DEPLOY:~/discordauth/
+      ssh -o StrictHostKeyChecking=no ci@$DEPLOY 'cd discordauth; echo DISCORD_TOKEN=$(cat .discordauth_discord_token) >> .env; sudo systemctl restart discordauth'
