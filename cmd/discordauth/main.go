@@ -109,7 +109,7 @@ func (s *Server) isBanned(name string) (bool, error) {
 	return s.db.IsBanned(name)
 }
 
-func (s *Server) UnbanUser(name string) error {
+func (s *Server) unbanUser(name string) error {
 	return s.db.DelBan(name)
 }
 

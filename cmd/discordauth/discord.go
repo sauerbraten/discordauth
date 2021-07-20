@@ -92,7 +92,7 @@ func handleMessage(d *discordgo.Session, m *discordgo.Message, s *Server) {
 		}
 		for _, user := range m.Mentions {
 			targetName := user.Username + "#" + user.Discriminator
-			err := s.banUser(targetName)
+			err := s.unbanUser(targetName)
 			if err != nil {
 				sendMessage(d, m.ChannelID, fmt.Sprintf(":boom: unbanning %s: %v", targetName, err))
 				continue
