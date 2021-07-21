@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 )
 
@@ -69,6 +70,9 @@ func GenerateKeyPair() (priv PrivateKey, pub PublicKey, err error) {
 
 func GenerateChallenge(pub PublicKey) (challenge, solution string, err error) {
 	secret, x, y, err := elliptic.GenerateKey(p192, rand.Reader)
+	if err != nil {
+		return "", "", fmt.Errorf("generating challenge: %w", err)
+	}
 
 	// what we send to the client
 	challenge = encodePoint(x, y)
