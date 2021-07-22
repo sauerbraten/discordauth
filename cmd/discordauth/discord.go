@@ -65,7 +65,7 @@ func sendMessage(d *discordgo.Session, channelID, content string) {
 }
 
 func handleMessage(d *discordgo.Session, m *discordgo.Message, s *Server) {
-	authorName := m.Author.Username + "#" + m.Author.Discriminator
+	authorName := removeWhitespace(m.Author.Username) + "#" + m.Author.Discriminator
 
 	switch fields := strings.Fields(m.Content); fields[0] {
 	case "ban":
@@ -130,4 +130,8 @@ func handleMessage(d *discordgo.Session, m *discordgo.Message, s *Server) {
 		log.Printf("discord: %s registered using public key %s\n", authorName, content)
 		sendMessage(d, m.ChannelID, fmt.Sprintf("registered you as **%s**!", authorName))
 	}
+}
+
+func removeWhitespace(s string) string {
+	return strings.Join(strings.Fields(s), "")
 }
