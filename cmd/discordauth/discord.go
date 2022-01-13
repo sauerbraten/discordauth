@@ -119,7 +119,7 @@ func handleMessage(d *discordgo.Session, m *discordgo.Message, s *Server) {
 		err = s.addUser(authorName, content, override)
 		if err != nil {
 			if existsErr := new(db.UserExistsError); errors.As(err, existsErr) {
-				sendMessage(d, m.ChannelID, fmt.Sprintf("You are already registered (your public key is: %s).\nTo replace your registered public key, send `override %s`.", existsErr.PublicKey, existsErr.PublicKey))
+				sendMessage(d, m.ChannelID, fmt.Sprintf("You are already registered (your public key is: %s).\nTo replace your registered public key, send `override %s`.", existsErr.PublicKey, content))
 			} else {
 				log.Println("discord: adding user:", err)
 				log.Printf("discord: ignoring message: %s\n", m.Content)
