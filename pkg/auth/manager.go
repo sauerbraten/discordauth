@@ -2,8 +2,6 @@ package auth
 
 import (
 	"fmt"
-
-	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 type Provider interface {
@@ -12,17 +10,17 @@ type Provider interface {
 }
 
 type callbacks struct {
-	onSuccess func(role.ID)
+	onSuccess func(Role)
 	onFailure func(error)
 }
 
 type Manager struct {
 	providersByDomain  map[string]Provider
-	rolesByDomain      map[string]role.ID
+	rolesByDomain      map[string]Role
 	callbacksByRequest map[uint32]callbacks
 }
 
-func NewManager(providers map[string]Provider, roles map[string]role.ID) *Manager {
+func NewManager(providers map[string]Provider, roles map[string]Role) *Manager {
 	return &Manager{
 		providersByDomain:  providers,
 		rolesByDomain:      roles,
@@ -30,7 +28,12 @@ func NewManager(providers map[string]Provider, roles map[string]role.ID) *Manage
 	}
 }
 
-func (m *Manager) TryAuthentication(domain, name string, onChal func(reqID uint32, chal string), onSuccess func(role.ID), onFailure func(error)) {
+func (m *Manager) TryAuthentication(
+	domain, name string,
+	onChal func(reqID uint32, chal string),
+	onSuccess func(Role),
+	onFailure func(error),
+) {
 	p, ok := m.providersByDomain[domain]
 	if !ok {
 		onFailure(fmt.Errorf("auth: no provider for domain '%s'", domain))
@@ -48,8 +51,6 @@ func (m *Manager) TryAuthentication(domain, name string, onChal func(reqID uint3
 		}
 		onChal(reqID, chal)
 	})
-
-	return
 }
 
 func (m *Manager) CheckAnswer(reqID uint32, domain string, answ string) (err error) {

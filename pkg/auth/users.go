@@ -3,14 +3,12 @@ package auth
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 type User struct {
 	Name      string    `json:"name"`
 	PublicKey PublicKey `json:"public_key"`
-	Role      role.ID   `json:"-"`
+	Role      Role      `json:"-"`
 }
 
 func (u *User) MarshalJSON() ([]byte, error) {
@@ -36,7 +34,7 @@ func (u *User) UnmarshalJSON(data []byte) error {
 	}
 	u.Name = proxy.Name
 	u.PublicKey = proxy.PublicKey
-	u.Role = role.Parse(proxy.Role)
+	u.Role = ParseRole(proxy.Role)
 	if u.Role == -1 {
 		return fmt.Errorf("invalid value for 'role'")
 	}

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/sauerbraten/maitred/v2/pkg/protocol"
-	"github.com/sauerbraten/waiter/pkg/protocol/role"
 )
 
 type RemoteProvider struct {
@@ -16,14 +15,14 @@ type RemoteProvider struct {
 	inc <-chan string
 	out chan<- string
 
-	rol                       role.ID // all successful auths will get this role in the ConfirmAnswer callback
+	rol                       Role // all successful auths will get this role in the ConfirmAnswer callback
 	ids                       *protocol.IDCycle
 	lastActivity              map[uint32]time.Time
 	requestChallengeCallbacks map[uint32]func(uint32, string, error)
-	confirmAnswerCallbacks    map[uint32]func(role.ID, error)
+	confirmAnswerCallbacks    map[uint32]func(Role, error)
 }
 
-func NewRemoteProvider(inc <-chan string, out chan<- string, rol role.ID) *RemoteProvider {
+func NewRemoteProvider(inc <-chan string, out chan<- string, rol Role) *RemoteProvider {
 	rp := &RemoteProvider{
 		inc: inc,
 		out: out,
@@ -32,7 +31,7 @@ func NewRemoteProvider(inc <-chan string, out chan<- string, rol role.ID) *Remot
 		ids:                       new(protocol.IDCycle),
 		lastActivity:              map[uint32]time.Time{},
 		requestChallengeCallbacks: map[uint32]func(uint32, string, error){},
-		confirmAnswerCallbacks:    map[uint32]func(role.ID, error){},
+		confirmAnswerCallbacks:    map[uint32]func(Role, error){},
 	}
 	go rp.run()
 	return rp
@@ -56,7 +55,7 @@ func (p *RemoteProvider) run() {
 				}
 				delete(p.requestChallengeCallbacks, reqID)
 				if callback, ok := p.confirmAnswerCallbacks[reqID]; ok {
-					callback(role.None, errors.New("timed out waiting for confirmation"))
+					callback(RoleNone, errors.New("timed out waiting for confirmation"))
 				}
 				delete(p.confirmAnswerCallbacks, reqID)
 				delete(p.lastActivity, reqID)
@@ -91,7 +90,7 @@ func (p *RemoteProvider) GenerateChallenge(name string, callback func(reqID uint
 	p.lastActivity[reqID] = time.Now()
 }
 
-func (p *RemoteProvider) ConfirmAnswer(reqID uint32, answ string, callback func(role.ID, error)) {
+func (p *RemoteProvider) ConfirmAnswer(reqID uint32, answ string, callback func(Role, error)) {
 	p.out <- fmt.Sprintf("%s %d %s", protocol.ConfAuth, reqID, answ)
 	p.confirmAnswerCallbacks[reqID] = callback
 	p.lastActivity[reqID] = time.Now()
@@ -143,7 +142,7 @@ func (p *RemoteProvider) handleFailAuth(args string) {
 	defer delete(p.confirmAnswerCallbacks, reqID)
 
 	if callback, ok := p.confirmAnswerCallbacks[reqID]; ok {
-		callback(role.None, errors.New("remote auth provider signalled failure"))
+		callback(RoleNone, errors.New("remote auth provider signalled failure"))
 	} else {
 		if _, ok := p.requestChallengeCallbacks[reqID]; ok {
 			delete(p.requestChallengeCallbacks, reqID)

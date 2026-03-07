@@ -50,7 +50,7 @@ func New(addr string, onConnect, onReconnect func(*Client)) (c *Client, authInc 
 	_onConnect := func() {
 		go func() {
 			for msg := range c.authOut {
-				c.conn.Send(msg)
+				c.conn.Send("%s", msg)
 			}
 		}()
 

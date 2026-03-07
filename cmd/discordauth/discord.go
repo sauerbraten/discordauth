@@ -110,7 +110,7 @@ func handleMessage(d *discordgo.Session, m *discordgo.Message, s *Server) {
 		if err != nil {
 			log.Printf("discord: checking if %s is banned: %v", authorName, err)
 			log.Printf("discord: ignoring message: %s\n", m.Content)
-			sendMessage(d, m.ChannelID, fmt.Sprintf("That didn't work! :thinking: I can't tell if you are banned or not."))
+			sendMessage(d, m.ChannelID, "That didn't work! :thinking: I can't tell if you are banned or not.")
 			return
 		}
 		if banned {

@@ -117,14 +117,14 @@ func parsePoint(s string) (x, y *big.Int, err error) {
 		return nil, nil, errors.New("auth: could not set X coordinate of curve point")
 	}
 
-	// the next steps find y using the formula y^2 = x^3 - 3*x + B
+	// the next steps find y using the formula y^2 = x^3 - 3x + B
 	// x^3
 	xxx := new(big.Int).Mul(x, x)
 	xxx.Mul(xxx, x)
-	// 3*x
+	// 3x
 	threeX := new(big.Int).Add(x, x)
 	threeX.Add(threeX, x)
-	// x^3 - 3*x + B
+	// x^3 - 3x + B
 	yy := new(big.Int).Sub(xxx, threeX)
 	yy.Add(yy, p192.B)
 
